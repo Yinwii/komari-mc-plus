@@ -40,8 +40,10 @@ export async function fetchLatestStats(uuids) {
 export async function updateNodeRealtime(node, records) {
   const stats = records[records.length - 1];
   if (!stats) return node.latestStats == null && node.status === "offline" ? node : { ...node, status: "offline", online: "离线" };
-  // 与 Junimo 的 Store 一样，最新样本未变化时保持对象引用，避免无意义的页面更新。
-  if (stats.updated_at && node.latestStats?.updated_at === stats.updated_at) return node;
+  const online = stats.online !== false;
+  const status = online ? "online" : "offline";
+  // 离线时可能仍返回旧样本，只有采样时间和在线状态均未变化时才复用对象。
+  if (stats.updated_at && node.latestStats?.updated_at === stats.updated_at && node.status === status) return node;
   const memoryUsed = Number(stats.ram?.used) || 0;
   const memoryTotal = Number(stats.ram?.total) || 0;
   const diskUsed = Number(stats.disk?.used) || 0;
@@ -65,8 +67,8 @@ export async function updateNodeRealtime(node, records) {
     uptimeText: formatDetailedUptime(stats.uptime),
     connectionCount: tcpConnections === null && udpConnections === null ? null : (tcpConnections || 0) + (udpConnections || 0),
     processCount: optionalNumber(stats.process),
-    online: formatUptime(stats.uptime),
-    status: "online",
+    online: online ? formatUptime(stats.uptime) : "离线",
+    status,
     updatedAt: stats.updated_at ? new Date(stats.updated_at).toLocaleTimeString("zh-CN", { hour12: false }) : node.updatedAt,
   };
 }
@@ -156,6 +158,7 @@ function normalizeLatestRecord(record) {
   const udpConnections = Number(record.connections_udp) || 0;
   const totalConnections = Number(record.connections) || 0;
   return [{
+    online: record.online,
     cpu: { usage: Number(record.cpu) || 0 },
     ram: { used: Number(record.ram) || 0, total: Number(record.ram_total) || 0 },
     swap: { used: Number(record.swap) || 0, total: Number(record.swap_total) || 0 },
@@ -200,7 +203,7 @@ function toNodeModel(node, records, pingLines = []) {
   const diskTotal = Number(node.disk_total) || Number(stats?.disk?.total) || 0;
   const memoryUsed = Number(stats?.ram?.used) || 0;
   const diskUsed = Number(stats?.disk?.used) || 0;
-  const online = Boolean(stats);
+  const online = Boolean(stats) && stats.online !== false;
   const tcpConnections = optionalNumber(stats?.connections?.tcp);
   const udpConnections = optionalNumber(stats?.connections?.udp);
 
