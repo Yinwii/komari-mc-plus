@@ -2,7 +2,7 @@
   "name": "Komari Minecraft",
   "short": "Minecraft",
   "description": "支持浅色、深色与 Minecraft 外观的监控面板",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "author": "ShumTin",
   "preview": "dist/preview.png",
   "url": "https://github.com/Yinwii/komari-minecraft",

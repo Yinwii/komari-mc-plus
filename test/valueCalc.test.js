@@ -13,6 +13,15 @@ import {
 
 const NOW = Date.parse("2026-09-28T12:00:00+08:00");
 
+// ⚠️ 断言里不要写死具体日期：formatDate 输出的是「本地日期」，
+// 而 CI（GitHub Actions）运行在 UTC，硬编码日期会因时区不同而失败。
+// 需要断言日期时，统一用 localDate() 按当前时区推算期望值。
+function localDate(ms) {
+  const d = new Date(ms);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function makeNode(overrides = {}) {
   return {
     uuid: "u1",
@@ -94,7 +103,7 @@ test("文本与 HTML 报告为 jsq 风格 emoji 清单", () => {
   assert.match(text, /- 📅 交易日期：2026-09-28/);
   assert.match(text, /### 🖥 测试节点/);
   assert.match(text, /- 💰 续费价格：365\.00 元\/年付/);
-  assert.match(text, /- ⏳ 剩余天数：181天（2027-03-28 到期）/);
+  assert.match(text, new RegExp(`- ⏳ 剩余天数：181天（${localDate(item.expiryMs)} 到期）`));
   assert.match(text, /- 💎 剩余价值：181\.00元/);
   assert.match(text, /- 🧾 溢价 \/ 总价：— \/ 181\.00元/);
   const html = buildHtmlReport([item], summary, { dateText: "2026-09-28 12:00:00" });
@@ -116,5 +125,7 @@ test("工具函数：周期选项齐全、日期解析与本地格式化", () =>
   assert.equal(CYCLE_OPTIONS.length, 6);
   assert.equal(parseExpiry("2026-01-02"), Date.parse("2026-01-02"));
   assert.equal(parseExpiry("not a date"), null);
-  assert.equal(formatDate(Date.parse("2026-01-02T23:30:00+08:00")), "2026-01-02");
+  const sample = Date.parse("2026-01-02T23:30:00+08:00");
+  assert.equal(formatDate(sample), localDate(sample));
+  assert.match(formatDate(sample), /^\d{4}-\d{2}-\d{2}$/);
 });
