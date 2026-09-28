@@ -266,7 +266,7 @@
 .price::before { content:"◆"; margin-right:4px; color:#f0ca60; font-size:9px; }
 
 /* 世界场景背景：天空、像素云和地平线草方块，形成 MC 模式的独立空间感。 */
-.overview-grid,.group-bar,.node-card,.details-panel,.info-panel,.chart-card { border-color:#53666a; background-color:#1b272b; background-image:none; box-shadow:4px 4px 0 #05090bcc,inset 0 1px 0 #afc4bd18; }
+.overview-grid,.group-bar,.node-card,.details-panel,.info-panel,.chart-card,.resource-card,.uptime-timeline { border-color:#53666a; background-color:#1b272b; background-image:none; box-shadow:4px 4px 0 #05090bcc,inset 0 1px 0 #afc4bd18; }
 .overview-card { background-color:transparent; }
 .group-bar { border-color:#5b4633; background-color:#382d26; background-image:linear-gradient(90deg,#ffffff08 1px,transparent 1px); background-size:11px 100%; box-shadow:4px 4px 0 #05090bcc,inset 0 2px 0 #9b6a40; }
 .group-bar::before { background:repeating-linear-gradient(0deg,#75a94e 0 8px,#4f7f42 8px 14px,#2d542f 14px 17px); }
@@ -300,6 +300,10 @@
   .chart-switch button { color:#6f5237; }
   .chart-switch button.active { background:#6e9f45; color:#fff8d9; }
   .chart-card { background:#f1e0b8; }
+  .resource-card,.uptime-timeline { border-color:#85532f; background-color:#f2e2b9; background-image:none; box-shadow:4px 5px 0 #0b100d99,inset 0 0 0 2px #c18a50; }
+  .resource-head span,.resource-sub,.timeline-head h2 small,.timeline-legend span { color:#6b5138; }
+  .resource-head b,.timeline-head h2 { color:#302218; text-shadow:1px 1px 0 #fff5d055; }
+  .resource-bar { background:#dfcc98; border-color:#b89b64; }
 
   /* 独立实色底隔开场景图片，确保控件和状态不受云层明暗影响。 */
   .details-hero {
