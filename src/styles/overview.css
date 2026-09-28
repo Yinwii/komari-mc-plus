@@ -220,11 +220,16 @@
   font-size: 10px;
 }
 
+/* 少数地区也保持单行横排，减少垂直版面占用；过多时自动换行。 */
 .overview-regions.is-1,
 .overview-regions.is-2,
 .overview-regions.is-3 {
-  flex-direction: column;
-  align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.overview-regions.is-1,
+.overview-regions.is-2 {
+  justify-content: flex-start;
 }
 
 /* 国旗墙：在线点亮、离线灰显 */
@@ -293,11 +298,13 @@
   fill: #17a05e;
 }
 
-/* 分地区在线率 */
+/* 分地区在线率：单行横排均分宽度，地区多时自动换行 */
 .region-rate {
+  flex: 1 1 0;
+  min-width: 118px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 10px;
   color: #71767e;
 }

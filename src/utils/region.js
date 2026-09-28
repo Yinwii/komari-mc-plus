@@ -151,7 +151,7 @@ function isTwoLetterCode(value) {
   return /^[a-z]{2}$/i.test(value) ? value.toUpperCase() : "";
 }
 
-function getRegionCode(region) {
+export function getRegionCode(region) {
   const value = String(region || "").trim();
   if (!value) return "";
 

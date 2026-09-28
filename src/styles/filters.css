@@ -123,3 +123,12 @@
   width: 18px;
   border-radius: 3px;
 }
+
+/* 唯一地区旗模式下多国分组的地球回退图标 */
+.group-flag-globe {
+  color: #8b8e95;
+}
+
+.monitor-app.is-dark .group-flag-globe {
+  color: #9aaabd;
+}

@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import AppIcon from "./AppIcon.vue";
 import FlagIcon from "./FlagIcon.vue";
+import { getRegionCode, getRegionDisplayName } from "../utils/region.js";
 
 const props = defineProps({
   overview: { type: Object, required: true },
@@ -74,12 +75,14 @@ function cycleRegionMode() {
 const regionStats = computed(() => {
   const map = new Map();
   props.nodes.forEach((node) => {
-    const region = String(node.region || "").trim();
-    if (!region) return;
-    const item = map.get(region) || { region, total: 0, online: 0 };
+    // 归一化为 ISO 代码：真实数据可能是 emoji /「美国 洛杉矶」等复合串，
+    // 点阵图坐标与旗子都按代码匹配，同时合并「US」与「洛杉矶」等写法。
+    const code = getRegionCode(node.region);
+    if (!code) return;
+    const item = map.get(code) || { region: code, total: 0, online: 0 };
     item.total += 1;
     if (node.status === "online") item.online += 1;
-    map.set(region, item);
+    map.set(code, item);
   });
   const list = [...map.values()];
   // 在线多的排前，其次节点多的；最多展示 12 个地区避免卡片膨胀。
@@ -90,7 +93,7 @@ const regionStats = computed(() => {
 const regionLitCount = computed(() => regionStats.value.filter((item) => item.online > 0).length);
 
 function regionTitle(item) {
-  return `${item.region}：在线 ${item.online} / ${item.total}`;
+  return `${getRegionDisplayName(item.region)}：在线 ${item.online} / ${item.total}`;
 }
 
 function regionDotClass(item) {

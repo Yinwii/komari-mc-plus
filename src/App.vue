@@ -14,6 +14,7 @@ import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRe
 import { getRpcTransportState, setRpcDemoHandler } from "./services/rpc.js";
 import { calculateAssets, fetchExchangeRates } from "./services/assets.js";
 import { fetchThemeSettings, fetchPublicSiteName, normalizeSettings, resolveAppearance, syncAdminAppearance } from "./services/themeSettings.js";
+import { getRegionCode } from "./utils/region.js";
 import { initWallpaper, loadWallpaperState, setWallpaperEnabled, switchWallpaper as switchBingWallpaper } from "./services/bingWallpaper.js";
 import { formatByteRate } from "./utils/format.js";
 
@@ -327,11 +328,12 @@ function getGroupsFromNodes(items) {
   items.forEach((node) => {
     counts.set(node.group, (counts.get(node.group) || 0) + 1);
     // 分组旗标：记录组内各地区分布（按出现顺序），供多种分组图标样式使用。
-    const code = String(node.region || "").trim();
-    if (code) {
-      if (!firstRegion.has(node.group)) firstRegion.set(node.group, code);
+    // 用 getRegionCode 归一化（emoji / 中文 / 城市名 → ISO 代码），合并同地区不同写法。
+    const normalized = getRegionCode(node.region);
+    if (normalized) {
+      if (!firstRegion.has(node.group)) firstRegion.set(node.group, normalized);
       const map = regions.get(node.group) || new Map();
-      map.set(code, (map.get(code) || 0) + 1);
+      map.set(normalized, (map.get(normalized) || 0) + 1);
       regions.set(node.group, map);
     }
   });

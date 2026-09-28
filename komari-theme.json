@@ -18,7 +18,7 @@
       { "key": "telecomPingTaskName", "name": "电信延迟任务名称", "type": "string", "default": "", "help": "填写完整任务名。三项全部留空时按运营商名称匹配，再按任务顺序补充；指定任务无数据时显示 --。" },
       { "key": "mobilePingTaskName", "name": "移动延迟任务名称", "type": "string", "default": "", "help": "仅在启用三网延迟后生效。" },
       { "key": "unicomPingTaskName", "name": "联通延迟任务名称", "type": "string", "default": "", "help": "仅在启用三网延迟后生效。" },
-      { "key": "groupIconMode", "name": "分组图标样式", "type": "select", "options": "唯一地区旗,首节点国旗,双旗对拼,国旗轮换,主旗+角标", "default": "唯一地区旗", "help": "分组条左侧图标：唯一地区旗=仅当组内节点同属一个地区时显示（旧行为）；首节点国旗=取组内第一个节点的地区；双旗对拼=按节点数取前两个地区左右各半；国旗轮换=单一旗位每 3 秒轮换组内地区；主旗+角标=节点数最多地区的国旗加覆盖地区数角标。" },
+      { "key": "groupIconMode", "name": "分组图标样式", "type": "select", "options": "唯一地区旗,首节点国旗,双旗对拼,国旗轮换,主旗+角标", "default": "双旗对拼", "help": "分组条左侧图标：双旗对拼=按节点数取前两个地区左右各半（默认，多国分组如 FREE 也有图标）；唯一地区旗=仅当组内节点同属一个地区时显示，多国分组显示地球；首节点国旗=取组内第一个节点的地区；国旗轮换=单一旗位每 3 秒轮换组内地区；主旗+角标=节点数最多地区的国旗加覆盖地区数角标。" },
       { "type": "title", "name": "首页总览" },
       { "key": "showStatsBar", "name": "显示总览统计条", "type": "switch", "default": true },
       { "key": "showOnline", "name": "显示在线", "type": "switch", "default": true },

@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { Globe } from "lucide-vue-next";
 import FlagIcon from "./FlagIcon.vue";
 
 /**
  * 分组条左侧图标：按后台 groupIconMode 渲染。
- * - 唯一地区旗（旧行为）：组内所有节点同属一个地区时显示该国旗；
+ * - 唯一地区旗：组内所有节点同属一个地区时显示该国旗；多国分组回退为地球图标（不再留空）；
  * - 首节点国旗：取组内第一个节点的地区；
  * - 双旗对拼：按节点数取前两个地区，左右各半拼成一面旗（超过 2 个地区 +N 角标）；
  * - 国旗轮换：单一旗位每 3 秒渐隐渐显轮换组内各地区；
@@ -13,17 +14,18 @@ import FlagIcon from "./FlagIcon.vue";
 
 const props = defineProps({
   group: { type: Object, required: true },
-  mode: { type: String, default: "唯一地区旗" },
+  mode: { type: String, default: "双旗对拼" },
 });
 
 const MODES = ["唯一地区旗", "首节点国旗", "双旗对拼", "国旗轮换", "主旗+角标"];
-const mode = computed(() => (MODES.includes(props.mode) ? props.mode : "唯一地区旗"));
+const mode = computed(() => (MODES.includes(props.mode) ? props.mode : "双旗对拼"));
 
 // regions: [{ region, count }]，getGroupsFromNodes 已按节点数降序。
 const regions = computed(() => (Array.isArray(props.group.regions) ? props.group.regions.filter((item) => item && item.region) : []));
 
-// 唯一地区旗：沿用 group.region（仅组内地区唯一时非空）。
+// 唯一地区旗：沿用 group.region（仅组内地区唯一时非空）；多国分组回退为地球图标。
 const uniqueRegion = computed(() => (mode.value === "唯一地区旗" ? props.group.region : ""));
+const globeFallback = computed(() => (mode.value === "唯一地区旗" && !uniqueRegion.value && regions.value.length > 1));
 const firstRegion = computed(() => (mode.value === "首节点国旗" ? props.group.firstRegion : ""));
 const topRegion = computed(() => (mode.value === "主旗+角标" && regions.value.length ? regions.value[0].region : ""));
 const splitRegions = computed(() => (mode.value === "双旗对拼" ? regions.value.slice(0, 2) : []));
@@ -68,6 +70,9 @@ const badgeCount = computed(() => {
     <Transition name="flag-fade" mode="out-in">
       <FlagIcon :key="rotateRegion" :code="rotateRegion" :label="`${group.code} 分组图标`" />
     </Transition>
+  </span>
+  <span v-else-if="globeFallback" class="group-flag group-flag-globe" :title="`${group.code}：覆盖 ${regions.length} 个地区`">
+    <Globe :size="14" :stroke-width="2" aria-hidden="true" />
   </span>
   <span v-else class="flag-fallback" aria-hidden="true" />
 </template>
