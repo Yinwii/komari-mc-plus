@@ -106,6 +106,27 @@
   font-size: 12.5px;
 }
 
+/* 详情列：小按钮，不触发行点击 */
+.nt-detail-btn {
+  padding: 4px 12px;
+  border: 1px solid #d8e4ef;
+  border-radius: 8px;
+  background: #f4f8fc;
+  color: #2f6bb0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.nt-detail-btn:hover { border-color: #9cc0e4; background: #e9f2fa; }
+
+.monitor-app.is-dark .nt-detail-btn {
+  border-color: #3a465c;
+  background: #232c3b;
+  color: #7fb3e8;
+}
+.monitor-app.is-dark .nt-detail-btn:hover { border-color: #56719a; background: #2c3a4e; }
+
 /* 深色主题 */
 .monitor-app.is-dark .node-table-wrap {
   background: #1b212d;

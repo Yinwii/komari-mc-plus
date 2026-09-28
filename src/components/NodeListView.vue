@@ -57,6 +57,7 @@ function usageTone(percent) {
           <th class="nt-right">↓ 下行</th>
           <th class="nt-right">总流量</th>
           <th>到期</th>
+          <th class="nt-center">详情</th>
         </tr>
       </thead>
       <tbody>
@@ -90,6 +91,7 @@ function usageTone(percent) {
           <td class="nt-right nt-rate-down">{{ rateText(node.down) }}</td>
           <td class="nt-right" :title="`出站 ${node.out} · 入站 ${node.in}`">{{ trafficText(node) }}</td>
           <td class="nt-expire">{{ expiryText(node) }}</td>
+          <td class="nt-center nt-detail"><button class="nt-detail-btn" type="button" title="查看节点详情" @click.stop="$emit('select', node)">详情</button></td>
         </tr>
       </tbody>
     </table>

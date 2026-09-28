@@ -7,12 +7,13 @@ import NodeCard from "./components/NodeCard.vue";
 import NodeListView from "./components/NodeListView.vue";
 import NodeDetails from "./components/NodeDetails.vue";
 import RemainingValuePanel from "./components/RemainingValuePanel.vue";
+import ValueCalculatorModal from "./components/ValueCalculatorModal.vue";
 import VisitorCard from "./components/VisitorCard.vue";
 import { LayoutGrid, Rows3 } from "lucide-vue-next";
 import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRealtime, toNodeModel } from "./services/komariApi.js";
 import { getRpcTransportState } from "./services/rpc.js";
 import { calculateAssets, fetchExchangeRates } from "./services/assets.js";
-import { fetchThemeSettings, normalizeSettings, resolveAppearance, syncAdminAppearance } from "./services/themeSettings.js";
+import { fetchThemeSettings, fetchPublicSiteName, normalizeSettings, resolveAppearance, syncAdminAppearance } from "./services/themeSettings.js";
 import { initWallpaper, loadWallpaperState, setWallpaperEnabled, switchWallpaper as switchBingWallpaper } from "./services/bingWallpaper.js";
 import { formatByteRate } from "./utils/format.js";
 
@@ -49,6 +50,11 @@ async function refreshSettings() {
     settings.value = await fetchThemeSettings();
     settingsError.value = "";
   } catch { settingsError.value = "主题设置加载失败，暂用上次配置或默认值"; }
+  try {
+    publicSiteName.value = await fetchPublicSiteName();
+  } catch {
+    // 站点名获取失败时保留上次值或默认 Komari。
+  }
   if (settings.value.showStatsBar && settings.value.showAssets) {
     try { rates.value = await fetchExchangeRates(); }
     catch { rates.value = null; }
@@ -60,8 +66,31 @@ function refreshVisibleSettings() {
 }
 const isMinecraftTheme = computed(() => appearance.value === "mc");
 const isDark = computed(() => appearance.value === "dark");
-const faviconUrl = "/favicon.ico";
+const faviconUrl = computed(() => {
+  const custom = String(settings.value.favicon || "").trim();
+  return custom || "/favicon.ico";
+});
+const siteName = computed(() => {
+  const custom = String(settings.value.siteName || "").trim();
+  return custom || publicSiteName.value || "Komari";
+});
+const publicSiteName = ref("");
+// 站点名/favicon 联动浏览器标题与标签图标。
+watch([siteName, faviconUrl], ([name, icon]) => {
+  document.title = name === "Komari" ? "Komari Monitor" : name;
+  let link = document.querySelector("link[rel~='icon']");
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  if (link.getAttribute("href") !== icon) link.setAttribute("href", icon);
+}, { immediate: true });
 const showValuePanel = ref(false);
+const calcCardUuids = ref([]);
+function openCalcCard(uuid) {
+  calcCardUuids.value = [uuid];
+}
 const wallpaper = ref(loadWallpaperState());
 const wallpaperStyle = computed(() => {
   const url = wallpaper.value.enabled ? wallpaper.value.url : "";
@@ -153,6 +182,15 @@ function openNode(node) {
 function closeDetails() {
   window.history.pushState({}, "", "/");
   selectedNode.value = null;
+}
+
+/** 点击左上角品牌区：回到站点首页（详情页中则返回列表）。 */
+function goHome() {
+  if (selectedNode.value) {
+    closeDetails();
+    return;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function refreshData() {
@@ -309,10 +347,10 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
   <div class="monitor-app" :class="{ 'is-dark': isDark, 'mc-theme': isMinecraftTheme, 'has-wallpaper': wallpaper.enabled && wallpaper.url }" :style="wallpaperStyle">
     <div v-if="wallpaper.enabled && wallpaper.url" class="wallpaper-overlay" aria-hidden="true" />
     <header class="header">
-      <div class="site-brand">
+      <a class="site-brand" href="/" title="返回首页" @click.prevent="goHome">
         <img class="site-icon" :src="faviconUrl" alt="" />
-        <h1>Komari</h1>
-      </div>
+        <h1>{{ siteName }}</h1>
+      </a>
       <Toolbar
         :appearance="appearance"
         :is-loading="isLoading"
@@ -369,9 +407,10 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
       :is-minecraft="isMinecraftTheme"
       @close="closeDetails"
       @select-host="openNode(nodes.find((node) => node.uuid === $event))"
-      @open-value="showValuePanel = true"
+      @open-calc="openCalcCard"
     />
     <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" />
+    <ValueCalculatorModal v-if="calcCardUuids.length" :nodes="nodes" :initial-uuids="calcCardUuids" @close="calcCardUuids = []" />
     <VisitorCard />
   </div>
 </template>

@@ -53,7 +53,7 @@ const rows = computed(() => props.nodes.map((node) => {
     uuid: node.uuid,
     name: node.name,
     group: node.group || "",
-    currency: String(node.currency || "¥").trim() || "¥",
+    currency: String(override.currency ?? (node.currency || "¥")).trim() || "¥",
     price: Number(override.price ?? (node.price > 0 ? node.price : 0)) || 0,
     cycle: Number(override.cycle ?? (Number(node.billingCycle) || 0)),
     expiry: String(override.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),

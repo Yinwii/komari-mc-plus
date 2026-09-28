@@ -18,6 +18,12 @@ export async function fetchThemeSettings() {
   return normalizeSettings(info?.theme_settings);
 }
 
+/** 后台设置的站点名（供未自定义时显示在左上角与标题）。 */
+export async function fetchPublicSiteName() {
+  const info = await callRpc("public:getPublicSettings");
+  return String(info?.sitename || "").trim();
+}
+
 export function resolveAppearance(local, systemDark) {
   if (["light", "dark", "mc"].includes(local)) return local;
   return systemDark ? "dark" : "light";

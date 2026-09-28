@@ -29,7 +29,8 @@ body {
   letter-spacing: -0.6px;
 }
 
-.site-brand { display: flex; align-items: center; gap: 9px; }
+.site-brand { display: flex; align-items: center; gap: 9px; border: 0; background: transparent; padding: 0; text-decoration: none; color: inherit; cursor: pointer; border-radius: 10px; transition: opacity 0.15s ease; }
+.site-brand:hover { opacity: 0.75; }
 .site-icon { display: block; width: 32px; height: 32px; object-fit: contain; }
 
 .toolbar {
