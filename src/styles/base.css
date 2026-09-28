@@ -5,6 +5,9 @@
   color: #202735;
   background: #f7f8fa;
   font-synthesis: none;
+  /* 防止 iOS 横屏时文字自动放大 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 * {

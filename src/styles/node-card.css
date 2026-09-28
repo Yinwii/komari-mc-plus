@@ -440,16 +440,25 @@
 }
 
 .signal-bars > i:hover::after,
-.signal-bars > i:hover::before {
+.signal-bars > i:hover::before,
+/* 触屏没有 hover：按住信号条时同样显示 tooltip */
+.signal-bars > i:active::after,
+.signal-bars > i:active::before {
   opacity: 1;
 }
 
-.signal-bars > i:hover {
+.signal-bars > i:hover,
+.signal-bars > i:active {
   z-index: 2;
+}
+
+/* 桌面端保留悬停放大效果 */
+.signal-bars > i:hover {
   transform: scale(1.08, 1.25);
 }
 
-.signal-bars > i:hover::after {
+.signal-bars > i:hover::after,
+.signal-bars > i:active::after {
   transform: translate(-50%, 0);
 }
 

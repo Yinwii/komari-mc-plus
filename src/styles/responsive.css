@@ -1,26 +1,4 @@
-@media (max-width: 800px) {
-  .monitor-app {
-    --page-gutter: 16px;
-    padding: 0 16px 30px;
-  }
-
-  .overview-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .toolbar {
-    gap: 4px;
-  }
-
-  .toolbar button {
-    width: 31px;
-    height: 31px;
-  }
-
-  .node-card {
-    min-width: 0;
-  }
-}
+/* ===== 窄屏适配（平板）===== */
 
 @media (max-width: 1100px) {
   .node-grid {
@@ -33,19 +11,123 @@
   }
 }
 
-@media (max-width: 580px) {
-  .node-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 860px) and (min-width: 581px) {
   .node-grid {
     grid-template-columns: repeat(2, minmax(260px, 1fr));
   }
 }
 
+@media (max-width: 580px) {
+  .node-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* ===== 手机适配 ===== */
+
 @media (max-width: 800px) {
+  .monitor-app {
+    --page-gutter: 16px;
+    /* 底部预留 iPhone Home Indicator 等安全区 */
+    padding: 0 16px calc(26px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .header {
+    height: 54px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .site-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .header h1 {
+    font-size: 19px;
+  }
+
+  /* 触控目标放大到 40px，避免 31px 的过小点击区 */
+  .toolbar {
+    gap: 2px;
+  }
+
+  .toolbar button,
+  .toolbar a {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* 总览卡片：保持两列并压缩高度（需覆盖 .monitor-app .overview-grid 的 auto-fit 规则） */
+  .monitor-app .overview-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .overview-card {
+    min-width: 0;
+    min-height: 0;
+    padding: 13px 14px 11px;
+  }
+
+  /* nowrap 的流量摘要会撑大列的最小宽度，把 1fr 1fr 挤成宽窄两列，允许换行 */
+  .overview-card .traffic-summary {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+
+  .overview-value,
+  .overview-card > b {
+    margin-top: 8px;
+    font-size: 21px;
+    letter-spacing: -0.4px;
+  }
+
+  .overview-card p {
+    margin-top: 6px;
+  }
+
+  .overview-card .overview-icon {
+    top: 12px;
+    right: 12px;
+    width: 26px;
+    height: 26px;
+  }
+
+  /* 分组筛选：固定高度内横向滑动，按钮不再换行挤压 */
+  .node-filters {
+    margin-top: 14px;
+  }
+
+  .group-bar {
+    height: 48px;
+    padding: 0 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .group-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .group-bar button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 10px;
+  }
+
+  .group-bar button .flag-icon,
+  .group-bar button .flag-fallback {
+    margin-right: 6px;
+  }
+
+  .node-card {
+    min-width: 0;
+    padding: 16px 14px 12px;
+  }
+
   .metric small {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -69,5 +151,54 @@
   .node-meta b {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .traffic-grid,
+  .io-grid {
+    gap: 14px;
+  }
+
+  .latency-grid {
+    gap: 10px;
+  }
+}
+
+/* ===== 超窄屏（≤360px，如 iPhone SE / 折叠屏外屏）===== */
+
+@media (max-width: 360px) {
+  .site-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .header h1 {
+    font-size: 17px;
+  }
+
+  .site-brand {
+    gap: 7px;
+  }
+
+  .toolbar {
+    gap: 0;
+  }
+
+  .toolbar button,
+  .toolbar a {
+    width: 36px;
+    height: 36px;
+  }
+
+  .overview-value,
+  .overview-card > b {
+    font-size: 18px;
+  }
+
+  .overview-card {
+    padding: 11px 12px 9px;
+  }
+
+  .overview-card .overview-icon {
+    display: none;
   }
 }

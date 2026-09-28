@@ -231,7 +231,11 @@
   .hero-status { align-items: flex-end; flex-direction: column; gap: 3px; }
   .details-info-grid { grid-template-columns: 1fr; }
   .chart-toolbar { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .details-panel { padding: 24px 20px 28px; border-radius: 13px; }
+  .details-panel { padding: 20px 14px 24px; border-radius: 13px; }
   .chart-grid { grid-template-columns: 1fr; }
   .info-items b { font-size: 13px; }
+  /* 触控目标放大 */
+  .details-back, .host-menu-trigger { width: 38px; height: 38px; }
+  /* 主机菜单改为从标题行右缘内收，避免超出屏幕 */
+  .host-menu { top: 42px; left: auto; right: 0; width: min(220px, calc(100vw - 48px)); }
 }

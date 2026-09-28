@@ -216,7 +216,7 @@ function getOverviewFromNodes(items) {
     <header class="header">
       <div class="site-brand">
         <img class="site-icon" :src="faviconUrl" alt="" />
-        <h1>Shum</h1>
+        <h1>Komari</h1>
       </div>
       <Toolbar :appearance="appearance" :is-loading="isLoading" @set-appearance="setAppearance" @refresh="refreshData" @open-admin="syncAdminAppearance(appearance)" />
     </header>
