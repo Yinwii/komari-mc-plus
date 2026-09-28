@@ -154,7 +154,7 @@ const mapDots = computed(() => {
     <div v-if="settings.showOnline" class="overview-card" :class="{ 'has-regions': regionMode && regionStats.length }">
       <div class="overview-label">
         在线节点
-        <button class="overview-calc-btn overview-style-btn" type="button" :title="`切换地区展示样式（当前：${regionMode || '关闭'}）`" @click="cycleRegionMode">{{ regionMode || "地区展示关" }} ⇄</button>
+        <button class="overview-calc-btn overview-style-btn" type="button" :title="regionMode ? `切换地区展示样式（当前：${regionMode}）` : '地区展示已关闭，点击选择展示样式'" @click="cycleRegionMode">{{ regionMode || "显示地区 +" }} ⇄</button>
       </div>
       <div class="overview-value">
         {{ overview.online.current

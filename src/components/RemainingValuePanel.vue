@@ -12,6 +12,7 @@ import {
 } from "../utils/valueCalc.js";
 import { renderValueImage } from "../utils/valueImage.js";
 import { setPremiumMode, usePremiumMode } from "../utils/premiumMode.js";
+import SelectMenu from "./SelectMenu.vue";
 
 const props = defineProps({ nodes: { type: Array, required: true } });
 const emit = defineEmits(["close", "open-calc"]);
@@ -157,8 +158,13 @@ function openCalc(uuid) {
   emit("open-calc", uuid);
 }
 
-function onCycleChange(row, event) {
-  updateRow(row.uuid, { cycle: Number(event.target.value) });
+function onCycleChange(row, cycle) {
+  updateRow(row.uuid, { cycle: Number(cycle) });
+}
+
+// 每行独立的周期下拉选项：非标准周期追加「自定义」项。
+function cycleOptionsFor(row) {
+  return STANDARD_CYCLES.has(row.cycle) ? cycleOptions : [...cycleOptions, { value: row.cycle, label: `自定义 · ${row.cycle}天` }];
 }
 
 function money(item, key) {
@@ -379,10 +385,7 @@ onBeforeUnmount(() => {
           </span>
           <span class="value-cell">
             <i class="value-tag">周期</i>
-            <select class="value-input" :value="row.cycle" @change="onCycleChange(row, $event)">
-              <option v-for="option in cycleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              <option v-if="!STANDARD_CYCLES.has(row.cycle)" :value="row.cycle">自定义 · {{ row.cycle }}天</option>
-            </select>
+            <SelectMenu :model-value="row.cycle" :options="cycleOptionsFor(row)" aria-label="计费周期" @update:model-value="onCycleChange(row, $event)" />
           </span>
           <span class="value-cell">
             <i class="value-tag">到期日</i>

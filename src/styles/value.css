@@ -811,3 +811,200 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
     text-align: center;
   }
 }
+
+/* ---------- SelectMenu：现代化自定义下拉（替代原生 select，跟随主题） ---------- */
+.select-menu {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.select-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px 0 11px;
+  border: 1px solid #d8e1ec;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef3f9 100%);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1f2733;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.select-menu-btn:hover {
+  border-color: #b3c4da;
+  background-color: #ffffff;
+}
+
+.select-menu:focus-within .select-menu-btn,
+.select-menu.is-open .select-menu-btn {
+  border-color: #4f8fdd;
+  box-shadow: 0 0 0 3px rgba(79, 143, 221, 0.16);
+}
+
+.select-menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.select-menu-caret {
+  flex: 0 0 auto;
+  color: #8b97a8;
+  transition: transform 0.18s ease;
+}
+
+.select-menu.is-open .select-menu-caret {
+  transform: rotate(180deg);
+}
+
+.select-menu-pop {
+  position: fixed;
+  z-index: 240;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  max-height: 264px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  box-shadow: 0 12px 32px rgba(18, 28, 45, 0.16);
+}
+
+.select-menu-pop li + li {
+  margin-top: 2px;
+}
+
+.select-menu-pop button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  color: #2a3542;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.select-menu-pop button span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-menu-pop button:hover {
+  background: #eef4fb;
+  color: #1d2836;
+}
+
+.select-menu-pop button.is-active {
+  background: #e8f1fc;
+  color: #2f6bb0;
+  font-weight: 600;
+}
+
+.select-menu-pop button.is-active svg {
+  color: #2f6bb0;
+}
+
+/* 弹层动画 */
+.select-pop-enter-active,
+.select-pop-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.select-pop-enter-from,
+.select-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.select-menu-pop.is-up.select-pop-enter-from,
+.select-menu-pop.is-up.select-pop-leave-to {
+  transform: translateY(4px);
+}
+
+/* 暗色主题 */
+.monitor-app.is-dark .select-menu-btn {
+  border-color: #3a465c;
+  background: linear-gradient(180deg, rgba(35, 44, 59, 0.9) 0%, rgba(30, 38, 51, 0.9) 100%);
+  color: #c3d2e2;
+}
+
+.monitor-app.is-dark .select-menu-btn:hover {
+  border-color: #56719a;
+  background-color: rgba(40, 51, 68, 0.95);
+}
+
+.monitor-app.is-dark .select-menu.is-open .select-menu-btn,
+.monitor-app.is-dark .select-menu:focus-within .select-menu-btn {
+  border-color: #5a7ca8;
+  box-shadow: 0 0 0 3px rgba(90, 130, 190, 0.2);
+}
+
+.monitor-app.is-dark .select-menu-caret {
+  color: #7f8fa3;
+}
+
+/* 弹层 Teleport 到 body，主题类直接挂在弹层上 */
+.select-menu-pop.is-dark {
+  border-color: rgba(120, 150, 190, 0.25);
+  background: rgba(23, 34, 49, 0.94);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.select-menu-pop.is-dark button {
+  color: #b7c9dc;
+}
+
+.select-menu-pop.is-dark button:hover {
+  background: rgba(90, 130, 190, 0.16);
+  color: #dbe7f3;
+}
+
+.select-menu-pop.is-dark button.is-active {
+  background: rgba(90, 140, 200, 0.25);
+  color: #a8ccf0;
+}
+
+/* 壁纸模式：按钮与弹层玻璃化，与卡片一致 */
+.monitor-app.has-wallpaper:not(.mc-theme) .select-menu-btn {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.monitor-app.is-dark.has-wallpaper .select-menu-btn {
+  background: rgba(23, 34, 49, 0.6);
+}
+
+.select-menu-pop.has-wallpaper:not(.mc-theme) {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.select-menu-pop.is-dark.has-wallpaper {
+  background: rgba(23, 34, 49, 0.92);
+}

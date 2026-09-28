@@ -5,6 +5,7 @@ import { fetchExchangeRates, aliases } from "../services/assets.js";
 import { buildHtmlReport, buildTextReport, computeNodeValue, cnyRatio, summarizeValues } from "../utils/valueCalc.js";
 import { renderValueImage } from "../utils/valueImage.js";
 import { setPremiumMode, usePremiumMode } from "../utils/premiumMode.js";
+import SelectMenu from "./SelectMenu.vue";
 
 const props = defineProps({
   nodes: { type: Array, required: true },
@@ -228,10 +229,13 @@ function onCyclePill(row, days) {
   patchOverride(row.uuid, { cycle: days });
 }
 
-function onCurrencyChange(row, event) {
-  const option = CURRENCY_OPTIONS.find((item) => item.symbol === event.target.value);
+function onCurrencyChange(row, symbol) {
+  const option = CURRENCY_OPTIONS.find((item) => item.symbol === symbol);
   if (option) patchOverride(row.uuid, { currency: option.symbol });
 }
+
+const currencyChoices = CURRENCY_OPTIONS.map((option) => ({ value: option.symbol, label: option.label }));
+const nodeChoices = computed(() => (props.nodes || []).map((node) => ({ value: node.uuid, label: node.name })));
 
 function onDateChange(row, event) {
   patchOverride(row.uuid, { expiry: event.target.value });
@@ -398,9 +402,7 @@ onBeforeUnmount(() => {
       <div class="calc-grid" :class="{ 'is-multi': cardsView.length > 1 }">
         <section v-for="view in cardsView" :key="view.card.id" class="calc-card" :class="{ 'is-expired': view.item.expired }">
           <div class="calc-card-head">
-            <select class="calc-server" :value="view.row.uuid" aria-label="选择服务器" @change="view.card.uuid = $event.target.value">
-              <option v-for="node in nodes" :key="node.uuid" :value="node.uuid">{{ node.name }}</option>
-            </select>
+            <SelectMenu :model-value="view.row.uuid" :options="nodeChoices" aria-label="选择服务器" @update:model-value="view.card.uuid = $event" />
             <button v-if="cardsView.length > 1" class="calc-card-close" aria-label="移除此卡片" @click="removeCard(view.card.id)"><X :size="14" /></button>
           </div>
 
@@ -423,9 +425,7 @@ onBeforeUnmount(() => {
                 </label>
                 <label class="calc-field">
                   <span>🪙 币种</span>
-                  <select class="value-input" :value="view.row.currency" @change="onCurrencyChange(view.row, $event)">
-                    <option v-for="option in CURRENCY_OPTIONS" :key="option.code" :value="option.symbol">{{ option.label }}</option>
-                  </select>
+                  <SelectMenu :model-value="view.row.currency" :options="currencyChoices" aria-label="币种" @update:model-value="onCurrencyChange(view.row, $event)" />
                 </label>
               </div>
 

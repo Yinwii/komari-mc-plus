@@ -55,7 +55,9 @@
 .monitor-app.has-wallpaper:not(.mc-theme) .group-bar,
 .monitor-app.has-wallpaper:not(.mc-theme) .node-card,
 .monitor-app.has-wallpaper:not(.mc-theme) .info-panel,
-.monitor-app.has-wallpaper:not(.mc-theme) .details-panel {
+.monitor-app.has-wallpaper:not(.mc-theme) .details-panel,
+.monitor-app.has-wallpaper:not(.mc-theme) .resource-card,
+.monitor-app.has-wallpaper:not(.mc-theme) .uptime-timeline {
   background-color: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
@@ -125,7 +127,9 @@
 .monitor-app.is-dark.has-wallpaper .node-card,
 .monitor-app.is-dark.has-wallpaper .info-panel,
 .monitor-app.is-dark.has-wallpaper .details-panel,
-.monitor-app.is-dark.has-wallpaper .chart-card {
+.monitor-app.is-dark.has-wallpaper .chart-card,
+.monitor-app.is-dark.has-wallpaper .resource-card,
+.monitor-app.is-dark.has-wallpaper .uptime-timeline {
   background: rgba(23, 34, 49, 0.6);
 }
 
