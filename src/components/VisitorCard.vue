@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Building2, ChevronDown, Clock, Globe, MapPin, Monitor, Network, X } from "lucide-vue-next";
+import { Building2, ChevronDown, Clock, Earth, Fingerprint, Globe, MapPin, Monitor, Navigation, Network, Radar, ScanFace, UserRound, X } from "lucide-vue-next";
 
 /**
  * 访客信息卡片：
@@ -13,7 +13,21 @@ import { Building2, ChevronDown, Clock, Globe, MapPin, Monitor, Network, X } fro
 const props = defineProps({
   enabled: { type: Boolean, default: true },
   autoCollapse: { type: [Number, String], default: 5 },
+  // 头像图标：与 komari-theme.json 的 visitorIcon select 选项文字一一对应；默认「扫描框+地球」为定制组合图形。
+  icon: { type: String, default: "扫描框+地球" },
 });
+
+const AVATAR_ICONS = {
+  "地球": Earth,
+  "指纹": Fingerprint,
+  "人像识别": ScanFace,
+  "定位图钉": MapPin,
+  "雷达": Radar,
+  "定位箭头": Navigation,
+  "人像光环": UserRound,
+  "网络节点": Network,
+};
+const avatarIcon = computed(() => AVATAR_ICONS[props.icon] || null);
 
 const STORE_KEY = "komari-visitor-card-v1";
 // mode: "open" 展开 | "mini" 收纳贴边；"closed-today" 按天隐藏
@@ -216,7 +230,14 @@ onBeforeUnmount(() => {
         @mouseleave="hovering = false; scheduleAutoCollapse()"
       >
         <header class="visitor-head">
-          <div class="visitor-avatar"><Network :size="17" :stroke-width="2" aria-hidden="true" /></div>
+          <div class="visitor-avatar">
+            <svg v-if="!avatarIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16" />
+              <circle cx="12" cy="12" r="5.6" />
+              <path d="M6.4 12h11.2M12 6.4a8.6 8.6 0 0 1 0 11.2M12 6.4a8.6 8.6 0 0 0 0 11.2" />
+            </svg>
+            <component :is="avatarIcon" v-else :size="18" :stroke-width="1.9" aria-hidden="true" />
+          </div>
           <div class="visitor-title">
             <b>{{ greeting }}，欢迎回来</b>
             <small v-if="info?.location || infoFailed">{{ info?.location || "归属地未知" }}</small>

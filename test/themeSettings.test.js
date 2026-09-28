@@ -21,6 +21,8 @@ test("后台配置从公开 RPC 读取，非法值回退且 false 不被默认�
   assert.equal(settings.visitorAutoCollapse, "5", "访客卡片默认 5 秒自动收纳");
   assert.equal(normalizeSettings({ showVisitorCard: false, visitorAutoCollapse: "0" }).showVisitorCard, false);
   assert.equal(normalizeSettings({ visitorAutoCollapse: "0" }).visitorAutoCollapse, "0");
+  assert.equal(normalizeSettings().visitorIcon, "扫描框+地球", "头像图标默认扫描框+地球");
+  assert.equal(normalizeSettings({ visitorIcon: "雷达" }).visitorIcon, "雷达");
   assert.equal(settings.showOnline, true);
   // 升级后忽略后台残留的旧外观配置。
   for (const key of ["defaultAppearance", "assetCurrency", "backgroundImage"]) assert.equal(key in settings, false);
