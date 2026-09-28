@@ -123,6 +123,8 @@ const effectiveBilling = computed(() => {
     cycle: Number(o.cycle ?? (Number(node.billingCycle) || 0)),
     expiry: String(o.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),
     market: Number(o.market ?? 0) || 0,
+    premiumMode: o.mode === "market" ? "market" : "premium",
+    manualPremium: o.premium === null || o.premium === undefined || o.premium === "" ? null : Number(o.premium),
   };
 });
 
@@ -130,7 +132,11 @@ const valueSummary = computed(() => {
   const node = props.node;
   const row = effectiveBilling.value;
   const item = computeNodeValue(
-    { uuid: node.uuid, name: node.name, currency: row.currency, price: row.price, billingCycle: row.cycle, expiredAt: row.expiry || null, market: row.market },
+    {
+      uuid: node.uuid, name: node.name, currency: row.currency, price: row.price,
+      billingCycle: row.cycle, expiredAt: row.expiry || null, market: row.market,
+      premiumMode: row.premiumMode, manualPremium: row.manualPremium,
+    },
     Date.now(),
   );
   const money = (value) => `${item.currency}${value.toFixed(2)}`;
@@ -138,7 +144,9 @@ const valueSummary = computed(() => {
   return {
     remaining: item.incomplete ? "缺计费信息" : item.permanent ? "长期 · 不折旧" : `${expiredPrefix}${money(item.remainingValue)}`,
     daily: item.dailyCost === null ? "—" : `${money(item.dailyCost)} / 天`,
-    premium: item.premium === null ? "未填市价" : `${item.premium >= 0 ? "+" : "-"}${money(Math.abs(item.premium))}`,
+    premium: item.premium === null
+      ? (item.premiumMode === "market" ? "未填市价" : "未填溢价")
+      : `${item.premium >= 0 ? "+" : "-"}${money(Math.abs(item.premium))}`,
     premiumClass: item.premium === null ? "" : item.premium > 0 ? "is-premium-high" : item.premium < 0 ? "is-premium-low" : "",
     clickable: !item.incomplete,
   };

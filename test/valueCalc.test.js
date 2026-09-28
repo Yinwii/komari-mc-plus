@@ -72,6 +72,50 @@ test("溢价 = 参考市价 − 剩余价值，未填市价时为 null", () => {
   assert.equal(computeNodeValue(makeNode(), NOW).premium, null);
 });
 
+test("默认溢价模式为「直接填溢价」：总价 = 剩余价值 + 溢价", () => {
+  const item = computeNodeValue(makeNode({ manualPremium: 50 }), NOW);
+  assert.equal(item.premiumMode, "premium");
+  assert.equal(item.premium, 50);
+  assert.ok(Math.abs(item.totalPrice - (item.remainingValue + 50)) < 1e-9);
+  // 未填溢价时溢价为 null，总价回落为剩余价值
+  const empty = computeNodeValue(makeNode(), NOW);
+  assert.equal(empty.premiumMode, "premium");
+  assert.equal(empty.premium, null);
+  assert.equal(empty.totalPrice, empty.remainingValue);
+});
+
+test("直接填溢价允许负数（折价）", () => {
+  const item = computeNodeValue(makeNode({ premiumMode: "premium", manualPremium: -60, market: 999 }), NOW);
+  assert.equal(item.premium, -60); // 市价被忽略
+  assert.ok(Math.abs(item.totalPrice - (item.remainingValue - 60)) < 1e-9);
+  assert.ok(Math.abs(item.premiumRate - (-60 / item.remainingValue)) < 1e-9);
+});
+
+test("market 模式：溢价 = 市价 − 剩余价值，总价 = 剩余价值 + 溢价 = 市价", () => {
+  const item = computeNodeValue(makeNode({ premiumMode: "market", market: 400, manualPremium: 12 }), NOW);
+  assert.equal(item.premiumMode, "market");
+  assert.ok(Math.abs(item.premium - (400 - item.remainingValue)) < 1e-9); // 直接填的溢价被忽略
+  assert.ok(Math.abs(item.totalPrice - 400) < 1e-9);
+  assert.ok(Math.abs(item.totalPrice - (item.remainingValue + item.premium)) < 1e-9);
+});
+
+test("汇总包含总价合计", () => {
+  const items = [computeNodeValue(makeNode({ manualPremium: 19 }), NOW)];
+  const summary = summarizeValues(items, { USD: 1 / 7, aliases }, NOW);
+  assert.ok(Math.abs(summary.total.cny.totalPrice - (181 + 19)) < 0.01);
+  assert.ok(Math.abs(summary.total.cny.value - 181) < 0.01);
+});
+
+test("报告中的溢价 / 总价随模式变化", () => {
+  const market = computeNodeValue(makeNode({ premiumMode: "market", market: 201 }), NOW);
+  const marketText = buildTextReport([market], summarizeValues([market], null, NOW), { dateText: "2026-09-28" });
+  assert.match(marketText, /- 🧾 溢价 \/ 总价：（市价 201\.00 ¥）\+20\.00元 \/ 201\.00元/);
+
+  const direct = computeNodeValue(makeNode({ manualPremium: -30 }), NOW);
+  const directText = buildTextReport([direct], summarizeValues([direct], null, NOW), { dateText: "2026-09-28" });
+  assert.match(directText, /- 🧾 溢价 \/ 总价：-30\.00元 \/ 151\.00元/);
+});
+
 test("汇总：CNY 折算与币种分组", () => {
   const items = [
     computeNodeValue(makeNode(), NOW),

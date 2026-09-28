@@ -201,7 +201,7 @@
 
 .value-row {
   display: grid;
-  grid-template-columns: 26px minmax(150px, 1.5fr) 92px 118px 132px 92px 78px 100px 82px;
+  grid-template-columns: 26px minmax(150px, 1.5fr) 92px 118px 132px 96px 78px 100px 82px 88px;
   align-items: center;
   gap: 8px;
   min-height: 56px;
@@ -285,6 +285,38 @@
 }
 
 .value-cell.is-result .is-value {
+  color: #12855c;
+}
+
+.value-cell.is-result .is-total {
+  color: #2f6bb0;
+}
+
+/* 溢价模式切换标签（桌面与手机均显示：溢价 ⇄ 市价） */
+.value-mode-chip {
+  align-self: flex-start;
+  padding: 0 6px;
+  border: 1px solid #dfe5ec;
+  border-radius: 7px;
+  background: #f2f6fa;
+  color: #5a6b80;
+  font: inherit;
+  font-size: 9.5px;
+  line-height: 1.7;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.value-mode-chip:hover {
+  border-color: #a8c2dd;
+  background: #ffffff;
+  color: #2c3844;
+}
+
+.value-mode-chip.is-market {
+  border-color: #cbe0d3;
+  background: #f1faf4;
   color: #12855c;
 }
 
@@ -628,11 +660,33 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
   color: #5eeaa8;
 }
 
+.monitor-app.is-dark .value-cell.is-result .is-total {
+  color: #8fb8f0;
+}
+
+.monitor-app.is-dark .value-mode-chip {
+  border-color: #3a465c;
+  background: #232c3b;
+  color: #9aaabd;
+}
+
+.monitor-app.is-dark .value-mode-chip:hover {
+  border-color: #4f6a8f;
+  background: #29343f;
+  color: #dde6f2;
+}
+
+.monitor-app.is-dark .value-mode-chip.is-market {
+  border-color: #2f5340;
+  background: #1d2b24;
+  color: #4ad07f;
+}
+
 /* ---- 手机适配 ---- */
 
 @media (max-width: 900px) {
   .value-row {
-    grid-template-columns: 26px minmax(120px, 1.6fr) 84px 112px 126px 84px 72px 94px 76px;
+    grid-template-columns: 26px minmax(120px, 1.6fr) 84px 112px 126px 88px 72px 94px 76px 80px;
     gap: 6px;
     padding: 8px 6px;
   }

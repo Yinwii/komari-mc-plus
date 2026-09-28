@@ -67,7 +67,7 @@ function patchOverride(uuid, patch) {
   persistOverrides();
 }
 
-/** 可编辑行：节点数据 + 手动修正（币种也支持修正）。 */
+/** 可编辑行：节点数据 + 手动修正（币种、溢价模式也支持修正）。 */
 const rowByUuid = computed(() => {
   const map = new Map();
   for (const node of props.nodes) {
@@ -81,6 +81,9 @@ const rowByUuid = computed(() => {
       cycle: Number(o.cycle ?? (Number(node.billingCycle) || 0)),
       expiry: String(o.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),
       market: Number(o.market ?? 0) || 0,
+      // 溢价模式默认「直接填溢价」（总价 = 剩余价值 + 溢价）。
+      premiumMode: o.mode === "market" ? "market" : "premium",
+      manualPremium: o.premium === null || o.premium === undefined || o.premium === "" ? null : Number(o.premium),
       currencyLocked: !o.currency && !(String(node.currency || "").trim()),
     });
   }
@@ -109,7 +112,11 @@ function removeCard(id) {
 
 function cardResult(row) {
   return computeNodeValue(
-    { uuid: row.uuid, name: row.name, group: row.group, currency: row.currency, price: row.price, billingCycle: row.cycle, expiredAt: row.expiry || null, market: row.market },
+    {
+      uuid: row.uuid, name: row.name, group: row.group, currency: row.currency,
+      price: row.price, billingCycle: row.cycle, expiredAt: row.expiry || null,
+      market: row.market, premiumMode: row.premiumMode, manualPremium: row.manualPremium,
+    },
     now.value,
   );
 }
@@ -124,10 +131,11 @@ const cardsView = computed(() => cards.value.map((card) => {
   const marketCny = toCny(item.market === null ? null : item.market);
   const valueCny = toCny(item.remainingValue);
   const priceCny = toCny(item.price);
+  const totalCny = toCny(item.totalPrice);
   const cyclePercent = item.permanent || !item.cycleDays || item.remainingDays === null
     ? null
     : Math.round(Math.min(100, Math.max(0, (item.remainingDays / item.cycleDays) * 100)));
-  return { card, row, item, ratio, valueCny, priceCny, marketCny, premiumCny: toCny(item.premium), cyclePercent };
+  return { card, row, item, ratio, valueCny, priceCny, marketCny, totalCny, premiumCny: toCny(item.premium), cyclePercent };
 }).filter(Boolean));
 
 function currencyRateText(currency) {
@@ -160,6 +168,37 @@ function onCurrencyChange(row, event) {
 
 function onDateChange(row, event) {
   patchOverride(row.uuid, { expiry: event.target.value });
+}
+
+/** 切换溢价模式：premium = 直接填溢价（默认），market = 按参考市价倒算。 */
+function setPremiumMode(row, mode) {
+  patchOverride(row.uuid, { mode });
+}
+
+function onPremiumInput(row, event) {
+  const raw = event.target.value;
+  patchOverride(row.uuid, { premium: raw === "" ? null : Number(raw) || 0 });
+}
+
+function onMarketInput(row, event) {
+  patchOverride(row.uuid, { market: Math.max(0, Number(event.target.value) || 0) });
+}
+
+/** 溢价金额：带正负号的统一展示（原币种或 CNY）。 */
+function premiumText(view) {
+  const value = view.item.premium;
+  if (value === null) return view.row.premiumMode === "market" ? "填市价后算" : "填溢价后算";
+  const sign = value > 0 ? "+" : "";
+  if (view.premiumCny === null) return `${sign}${money(view.row.currency, value)}`;
+  return `${sign}¥${fmt(view.premiumCny)}`;
+}
+
+/** 总价 = 剩余价值 + 溢价。 */
+function totalText(view) {
+  const value = view.item.totalPrice;
+  if (value === null) return "—";
+  if (view.totalCny === null) return money(view.row.currency, value);
+  return `¥${fmt(view.totalCny)}`;
 }
 
 function meta() {
@@ -307,10 +346,49 @@ onBeforeUnmount(() => {
                   <span>📅 到期日期</span>
                   <input class="value-input" type="date" :min="expiryMin()" :value="view.row.expiry" @change="onDateChange(view.row, $event)" />
                 </label>
-                <label class="calc-field">
-                  <span title="同配置机器当前的市场售价，用于估算溢价。不填则溢价显示为待计算">🛒 参考市价</span>
-                  <input class="value-input" type="number" min="0" step="0.01" placeholder="可选 · 用于算溢价" :value="view.row.market || ''" @change="patchOverride(view.row.uuid, { market: Math.max(0, Number($event.target.value) || 0) })" />
-                </label>
+                <div class="calc-field">
+                  <span class="calc-field-head">
+                    <span>{{ view.row.premiumMode === "market" ? "🛒 参考市价" : "🧾 溢价" }}</span>
+                    <span class="calc-mode-switch" role="group" aria-label="溢价计算方式">
+                      <button
+                        type="button"
+                        :class="{ active: view.row.premiumMode === 'premium' }"
+                        title="直接填写溢价：总价 = 剩余价值 + 溢价（默认）"
+                        @click="setPremiumMode(view.row, 'premium')"
+                      >填溢价</button>
+                      <button
+                        type="button"
+                        :class="{ active: view.row.premiumMode === 'market' }"
+                        title="填写参考市价，系统倒算溢价：溢价 = 市价 − 剩余价值"
+                        @click="setPremiumMode(view.row, 'market')"
+                      >按市价</button>
+                    </span>
+                  </span>
+                  <input
+                    v-if="view.row.premiumMode === 'premium'"
+                    class="value-input"
+                    type="number"
+                    step="0.01"
+                    placeholder="正数=加价，负数=折价"
+                    :value="view.row.manualPremium ?? ''"
+                    @change="onPremiumInput(view.row, $event)"
+                  />
+                  <input
+                    v-else
+                    class="value-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="可选 · 用于倒算溢价"
+                    :value="view.row.market || ''"
+                    @change="onMarketInput(view.row, $event)"
+                  />
+                  <small v-if="view.row.premiumMode === 'premium' && view.row.market > 0" class="calc-hint">
+                    已填参考市价 {{ money(view.row.currency, view.row.market) }}，切到「按市价」可继续沿用
+                  </small>
+                  <small v-else-if="view.row.premiumMode === 'premium'" class="calc-hint is-muted">总价 = 剩余价值 + 溢价</small>
+                  <small v-else class="calc-hint is-muted">溢价 = 参考市价 − 剩余价值</small>
+                </div>
               </div>
 
               <div class="calc-rate">
@@ -340,14 +418,17 @@ onBeforeUnmount(() => {
 
               <div class="calc-result-grid">
                 <div>
-                  <span title="溢价 = 参考市价 − 剩余价值，由系统自动计算，无需手动填写；想高于成本卖出多少即市价减残值">🧾 溢价（自动）</span>
-                  <b :class="{ 'is-neg': (view.premiumCny ?? view.item.premium) > 0, 'is-pos': (view.premiumCny ?? view.item.premium) < 0 }">
-                    {{ view.item.premium === null ? "填市价后算" : `¥${fmt(view.premiumCny ?? view.item.premium)}` }}
+                  <span :title="view.row.premiumMode === 'market' ? '溢价 = 参考市价 − 剩余价值' : '直接填写的溢价，正数=加价、负数=折价'">
+                    🧾 溢价（{{ view.row.premiumMode === "market" ? "市价 − 残值" : "直接填" }}）
+                  </span>
+                  <b :class="{ 'is-neg': view.item.premium > 0, 'is-pos': view.item.premium < 0 }">
+                    {{ premiumText(view) }}
                   </b>
                 </div>
                 <div>
-                  <span>💵 总价（CNY）</span>
-                  <b>{{ view.priceCny === null ? money(view.row.currency, view.item.price) : `¥${fmt(view.priceCny)}` }}</b>
+                  <span title="总价 = 剩余价值 + 溢价">💵 总价（剩余价值 + 溢价）</span>
+                  <b>{{ totalText(view) }}</b>
+                  <small v-if="view.totalCny !== null && view.row.currency !== '¥'" class="calc-total-origin">≈ {{ money(view.row.currency, view.item.totalPrice) }}</small>
                 </div>
               </div>
 
@@ -362,7 +443,7 @@ onBeforeUnmount(() => {
 
       <footer class="value-foot">
         <Check :size="14" aria-hidden="true" />
-        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；溢价 = 参考市价 − 剩余价值（填入市价后自动计算）；长期/买断不折旧；修改自动记忆并与总面板共用。
+        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；总价 = 剩余价值 + 溢价；溢价默认「直接填」（正数加价、负数折价），也可切到「按市价」由 参考市价 − 剩余价值 倒算；长期/买断不折旧；修改自动记忆并与总面板共用。
       </footer>
 
       <transition name="value-toast">

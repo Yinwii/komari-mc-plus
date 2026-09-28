@@ -69,6 +69,49 @@
 .calc-field > span { font-size: 11.5px; font-weight: 600; color: #64717d; }
 .calc-field .value-input { width: 100%; }
 
+/* 溢价模式切换：填溢价（默认）/ 按市价 */
+.calc-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.calc-mode-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid #e2e7ee;
+  border-radius: 8px;
+  background: #f5f8fb;
+}
+
+.calc-mode-switch button {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #7a8797;
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1.6;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.calc-mode-switch button:hover { color: #3d4757; }
+
+.calc-mode-switch button.active {
+  background: #ffffff;
+  color: #b06f12;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(60, 80, 110, 0.14);
+}
+
+.calc-hint { color: #b06f12; font-size: 10.5px; line-height: 1.45; }
+.calc-hint.is-muted { color: #93a0b3; }
+
 .calc-price { width: 100%; }
 
 .calc-pills { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -90,8 +133,6 @@
   color: #b06f12;
   font-weight: 600;
 }
-
-.calc-hint { color: #b06f12; font-size: 10.5px; }
 
 .calc-rate {
   display: flex;
@@ -153,6 +194,7 @@
 .calc-result-grid b { font-size: 14px; color: #3d4757; font-variant-numeric: tabular-nums; }
 .calc-result-grid b.is-neg { color: #c25b3a; }
 .calc-result-grid b.is-pos { color: #12855c; }
+.calc-total-origin { font-size: 10.5px; color: #9a8b56; font-variant-numeric: tabular-nums; }
 
 .calc-card-actions { display: flex; gap: 8px; }
 .calc-card-actions .value-btn { flex: 1; justify-content: center; }
@@ -170,6 +212,12 @@
 }
 .monitor-app.is-dark .calc-server:focus { border-color: #5a7ca8; box-shadow: 0 0 0 3px rgba(90, 130, 190, 0.2); }
 .monitor-app.is-dark .calc-field > span { color: #8d99ad; }
+.monitor-app.is-dark .calc-mode-switch { border-color: #3a465c; background: #232c3b; }
+.monitor-app.is-dark .calc-mode-switch button { color: #8d99ad; }
+.monitor-app.is-dark .calc-mode-switch button:hover { color: #cfd8e6; }
+.monitor-app.is-dark .calc-mode-switch button.active { background: #33291a; color: #efb75e; box-shadow: none; }
+.monitor-app.is-dark .calc-hint.is-muted { color: #7d8ba0; }
+.monitor-app.is-dark .calc-total-origin { color: #a89356; }
 .monitor-app.is-dark .calc-pills button { border-color: #3a465c; background: #232c3b; color: #9aaabd; }
 .monitor-app.is-dark .calc-pills button:hover { border-color: #56719a; color: #dde6f2; }
 .monitor-app.is-dark .calc-pills button.active { border-color: #b9872f; background: #33291a; color: #efb75e; }

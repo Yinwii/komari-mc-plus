@@ -58,6 +58,9 @@ const rows = computed(() => props.nodes.map((node) => {
     cycle: Number(override.cycle ?? (Number(node.billingCycle) || 0)),
     expiry: String(override.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),
     market: Number(override.market ?? 0) || 0,
+    // 溢价模式默认「直接填溢价」：总价 = 剩余价值 + 溢价。
+    premiumMode: override.mode === "market" ? "market" : "premium",
+    manualPremium: override.premium === null || override.premium === undefined || override.premium === "" ? null : Number(override.premium),
     hasApiInfo: Boolean(node.price > 0 || node.expiredAt),
   };
 }));
@@ -76,6 +79,7 @@ const resultByUuid = computed(() => {
       uuid: row.uuid, name: row.name, group: row.group, currency: row.currency,
       price: row.price, billingCycle: row.cycle,
       expiredAt: row.expiry || null, market: row.market,
+      premiumMode: row.premiumMode, manualPremium: row.manualPremium,
     }, now.value));
   }
   return map;
@@ -144,6 +148,12 @@ function toggleAll() {
 function updateRow(uuid, patch) {
   overrides.value = { ...overrides.value, [uuid]: { ...overrides.value[uuid], ...patch } };
   persistOverrides();
+}
+
+/** 切换该节点的溢价模式：premium = 直接填溢价（默认），market = 按参考市价倒算。 */
+function togglePremiumMode(uuid) {
+  const current = overrides.value[uuid]?.mode === "market" ? "market" : "premium";
+  updateRow(uuid, { mode: current === "market" ? "premium" : "market" });
 }
 
 function onCycleChange(row, event) {
@@ -307,7 +317,7 @@ onBeforeUnmount(() => {
           <strong :class="{ 'is-neg': summary.total.cny?.premium > 0, 'is-pos': summary.total.cny?.premium < 0 }">
             {{ summary.total.cny ? `¥${summary.total.cny.premium.toFixed(2)}` : "—" }}
           </strong>
-          <span class="value-stat-sub">参考市价 − 剩余价值</span>
+          <span class="value-stat-sub">直接填 或 市价倒算</span>
         </div>
       </section>
 
@@ -329,7 +339,7 @@ onBeforeUnmount(() => {
       <div class="value-table-wrap">
         <div class="value-row value-row-head" aria-hidden="true">
           <span />
-          <span>节点</span><span>单价</span><span>周期</span><span>到期日</span><span>参考市价</span><span>剩余</span><span>剩余价值</span><span>溢价</span>
+          <span>节点</span><span>单价</span><span>周期</span><span>到期日</span><span>溢价 / 市价</span><span>剩余</span><span>剩余价值</span><span>溢价</span><span>总价</span>
         </div>
         <div v-if="visibleRows.length === 0" class="value-empty">没有匹配的节点</div>
         <div
@@ -360,9 +370,33 @@ onBeforeUnmount(() => {
             <i class="value-tag">到期日</i>
             <input class="value-input" type="date" :value="row.expiry" @change="updateRow(row.uuid, { expiry: $event.target.value })" />
           </span>
-          <span class="value-cell">
-            <i class="value-tag">参考市价</i>
-            <input class="value-input" type="number" min="0" step="0.01" placeholder="可选" :value="row.market || ''" @change="updateRow(row.uuid, { market: Math.max(0, Number($event.target.value) || 0) })" />
+          <span class="value-cell is-mode">
+            <button
+              type="button"
+              class="value-mode-chip"
+              :class="{ 'is-market': row.premiumMode === 'market' }"
+              :title="row.premiumMode === 'market' ? '当前：按参考市价倒算溢价（点击改为直接填溢价）' : '当前：直接填溢价，总价 = 剩余价值 + 溢价（点击改为按市价）'"
+              @click="togglePremiumMode(row.uuid)"
+            >{{ row.premiumMode === "market" ? "市价" : "溢价" }} ⇄</button>
+            <input
+              v-if="row.premiumMode === 'premium'"
+              class="value-input"
+              type="number"
+              step="0.01"
+              placeholder="±0.00"
+              :value="row.manualPremium ?? ''"
+              @change="updateRow(row.uuid, { premium: $event.target.value === '' ? null : Number($event.target.value) || 0 })"
+            />
+            <input
+              v-else
+              class="value-input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="可选"
+              :value="row.market || ''"
+              @change="updateRow(row.uuid, { market: Math.max(0, Number($event.target.value) || 0) })"
+            />
           </span>
           <span class="value-cell is-result">
             <i class="value-tag">剩余</i>
@@ -376,12 +410,16 @@ onBeforeUnmount(() => {
             <i class="value-tag">溢价</i>
             <b :class="resultByUuid.get(row.uuid)?.premium > 0 ? 'is-neg' : resultByUuid.get(row.uuid)?.premium < 0 ? 'is-pos' : ''">{{ money(resultByUuid.get(row.uuid) || {}, "premium") }}</b>
           </span>
+          <span class="value-cell is-result">
+            <i class="value-tag">总价</i>
+            <b class="is-total" title="总价 = 剩余价值 + 溢价">{{ money(resultByUuid.get(row.uuid) || {}, "totalPrice") }}</b>
+          </span>
         </div>
       </div>
 
       <footer class="value-foot">
         <Camera :size="14" aria-hidden="true" />
-        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；长期/买断不折旧；填写参考市价后计算溢价（正数=市价高于剩余价值）。
+        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；总价 = 剩余价值 + 溢价；溢价默认「直接填」（点每行的 溢价/市价 标签切换），也可按参考市价倒算；长期/买断不折旧。
       </footer>
 
       <transition name="value-toast">

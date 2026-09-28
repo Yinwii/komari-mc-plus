@@ -25,16 +25,17 @@ function roundRect(ctx, x, y, width, height, radius) {
  */
 export async function renderValueImage(items, summary, meta = {}) {
   const scale = 2;
-  const width = 960;
+  const width = 1040;
   const padding = 44;
   const rowHeight = 58;
   const headerHeight = 150;
   const columns = [
     { title: "🖥 节点", x: padding, align: "left" },
-    { title: "💰 单价", x: 470, align: "right" },
+    { title: "💰 单价", x: 500, align: "right" },
     { title: "⏳ 剩余", x: 600, align: "center" },
-    { title: "💎 剩余价值", x: 742, align: "right" },
-    { title: "🧾 溢价", x: 916, align: "right" },
+    { title: "💎 剩余价值", x: 800, align: "right" },
+    { title: "🧾 溢价", x: 910, align: "right" },
+    { title: "💵 总价", x: width - padding, align: "right" },
   ];
   const height = headerHeight + rowHeight + items.length * rowHeight + 118;
 
@@ -75,7 +76,7 @@ export async function renderValueImage(items, summary, meta = {}) {
   const total = summary.total.cny;
   ctx.textAlign = "right";
   ctx.fillStyle = "rgba(255,255,255,0.05)";
-  roundRect(ctx, width - padding - 340, 44, 340, 84, 14);
+  roundRect(ctx, width - padding - 380, 44, 380, 84, 14);
   ctx.fill();
   ctx.fillStyle = "#7c8db0";
   ctx.font = `400 13px ${FONT}`;
@@ -86,7 +87,12 @@ export async function renderValueImage(items, summary, meta = {}) {
   ctx.fillText(valueText, width - padding - 20, 104);
   ctx.fillStyle = "#7c8db0";
   ctx.font = `400 12px ${FONT}`;
-  if (total && total.premium) ctx.fillText(`溢价 ¥${total.premium.toFixed(2)}`, width - padding - 20, 122);
+  if (total) {
+    const parts = [];
+    if (total.premium) parts.push(`溢价 ${total.premium > 0 ? "+" : ""}¥${total.premium.toFixed(2)}`);
+    if (Math.abs(total.totalPrice - total.value) > 0.005) parts.push(`总价 ¥${total.totalPrice.toFixed(2)}`);
+    if (parts.length) ctx.fillText(parts.join(" · "), width - padding - 20, 122);
+  }
   ctx.textAlign = "left";
 
   // 表头
@@ -125,21 +131,21 @@ export async function renderValueImage(items, summary, meta = {}) {
     ctx.font = `400 13px ${FONT}`;
     ctx.textAlign = "right";
     ctx.fillStyle = expired ? "#64748b" : "#c3cde4";
-    ctx.fillText(`${item.price.toFixed(2)} ${item.currency}`, 528, centerY);
+    ctx.fillText(`${item.price.toFixed(2)} ${item.currency}`, 500, centerY);
     ctx.textAlign = "center";
     ctx.fillText(item.permanent ? "长期" : item.remainingDays === null ? "—" : `${item.remainingDays} 天`, 600, centerY);
     ctx.textAlign = "right";
     if (item.remainingValue === null) {
       ctx.fillStyle = "#5b6b8c";
-      ctx.fillText("—", 812, centerY);
+      ctx.fillText("—", 800, centerY);
     } else if (ratio !== null) {
       ctx.fillStyle = expired ? "#64748b" : "#4ade80";
       ctx.font = `600 15px ${FONT}`;
-      ctx.fillText(`¥${(item.remainingValue * ratio).toFixed(2)}`, 812, centerY);
+      ctx.fillText(`¥${(item.remainingValue * ratio).toFixed(2)}`, 800, centerY);
     } else {
       ctx.fillStyle = expired ? "#64748b" : "#4ade80";
       ctx.font = `600 15px ${FONT}`;
-      ctx.fillText(`${item.remainingValue.toFixed(2)} ${item.currency}`, 812, centerY);
+      ctx.fillText(`${item.remainingValue.toFixed(2)} ${item.currency}`, 800, centerY);
     }
     ctx.font = `400 13px ${FONT}`;
     ctx.fillStyle = item.premium === null ? "#5b6b8c" : item.premium > 0 ? "#f87171" : "#60a5fa";
@@ -148,7 +154,16 @@ export async function renderValueImage(items, summary, meta = {}) {
       : ratio !== null
         ? `${item.premium * ratio >= 0 ? "+" : ""}¥${(item.premium * ratio).toFixed(2)}`
         : `${item.premium >= 0 ? "+" : ""}${item.premium.toFixed(2)} ${item.currency}`;
-    ctx.fillText(premiumText, 916, centerY);
+    ctx.fillText(premiumText, 910, centerY);
+
+    // 总价 = 剩余价值 + 溢价
+    ctx.fillStyle = item.totalPrice === null ? "#5b6b8c" : "#c9d6f2";
+    const totalPriceText = item.totalPrice === null
+      ? "—"
+      : ratio !== null
+        ? `¥${(item.totalPrice * ratio).toFixed(2)}`
+        : `${item.totalPrice.toFixed(2)} ${item.currency}`;
+    ctx.fillText(totalPriceText, width - padding, centerY);
   });
 
   // 底部
