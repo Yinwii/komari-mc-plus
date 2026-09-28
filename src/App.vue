@@ -5,10 +5,12 @@ import OverviewCards from "./components/OverviewCards.vue";
 import GroupFilter from "./components/GroupFilter.vue";
 import NodeCard from "./components/NodeCard.vue";
 import NodeDetails from "./components/NodeDetails.vue";
+import RemainingValuePanel from "./components/RemainingValuePanel.vue";
 import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRealtime } from "./services/komariApi.js";
 import { getRpcTransportState } from "./services/rpc.js";
 import { calculateAssets, fetchExchangeRates } from "./services/assets.js";
 import { fetchThemeSettings, normalizeSettings, resolveAppearance, syncAdminAppearance } from "./services/themeSettings.js";
+import { initWallpaper, loadWallpaperState, setWallpaperEnabled, switchWallpaper as switchBingWallpaper } from "./services/bingWallpaper.js";
 import { formatByteRate } from "./utils/format.js";
 
 const APPEARANCE_STORAGE_KEY = "komari-appearance";
@@ -56,6 +58,23 @@ function refreshVisibleSettings() {
 const isMinecraftTheme = computed(() => appearance.value === "mc");
 const isDark = computed(() => appearance.value === "dark");
 const faviconUrl = "/favicon.ico";
+const showValuePanel = ref(false);
+const wallpaper = ref(loadWallpaperState());
+const wallpaperStyle = computed(() => {
+  const url = wallpaper.value.enabled ? wallpaper.value.url : "";
+  return url ? { backgroundImage: `url("${url}")` } : {};
+});
+async function onSwitchWallpaper() {
+  const next = await switchBingWallpaper();
+  if (next) {
+    wallpaper.value = { ...loadWallpaperState() };
+  } else {
+    console.warn("[Wallpaper] 所有 Bing 图源均不可用");
+  }
+}
+function onToggleWallpaper() {
+  wallpaper.value = setWallpaperEnabled(!wallpaper.value.enabled);
+}
 const activeGroup = ref("all");
 const selectedNode = ref(null);
 const isLoading = ref(true);
@@ -165,6 +184,8 @@ onMounted(() => {
   refreshStopped = false;
   refreshData();
   realtimeTimer = window.setInterval(refreshRealtimeData, 2000);
+  void initWallpaper().then(() => { wallpaper.value = { ...loadWallpaperState() }; });
+  if (window.location.hash === "#value") showValuePanel.value = true;
 });
 onBeforeUnmount(() => {
   refreshStopped = true;
@@ -212,13 +233,24 @@ function getOverviewFromNodes(items) {
 </script>
 
 <template>
-  <div class="monitor-app" :class="{ 'is-dark': isDark, 'mc-theme': isMinecraftTheme }">
+  <div class="monitor-app" :class="{ 'is-dark': isDark, 'mc-theme': isMinecraftTheme, 'has-wallpaper': wallpaper.enabled && wallpaper.url }" :style="wallpaperStyle">
+    <div v-if="wallpaper.enabled && wallpaper.url" class="wallpaper-overlay" aria-hidden="true" />
     <header class="header">
       <div class="site-brand">
         <img class="site-icon" :src="faviconUrl" alt="" />
         <h1>Komari</h1>
       </div>
-      <Toolbar :appearance="appearance" :is-loading="isLoading" @set-appearance="setAppearance" @refresh="refreshData" @open-admin="syncAdminAppearance(appearance)" />
+      <Toolbar
+        :appearance="appearance"
+        :is-loading="isLoading"
+        :wallpaper-on="wallpaper.enabled"
+        @set-appearance="setAppearance"
+        @refresh="refreshData"
+        @open-admin="syncAdminAppearance(appearance)"
+        @open-value="showValuePanel = true"
+        @switch-wallpaper="onSwitchWallpaper"
+        @toggle-wallpaper="onToggleWallpaper"
+      />
     </header>
     <section
       v-if="!selectedNode && isLoading && nodes.length === 0"
@@ -260,5 +292,6 @@ function getOverviewFromNodes(items) {
       @close="closeDetails"
       @select-host="openNode(nodes.find((node) => node.uuid === $event))"
     />
+    <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" />
   </div>
 </template>

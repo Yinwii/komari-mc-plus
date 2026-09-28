@@ -1,4 +1,4 @@
-const aliases = { "¥": "CNY", "￥": "CNY", RMB: "CNY", "$": "USD", "HK$": "HKD", "€": "EUR", "£": "GBP", "₽": "RUB", "₣": "CHF", "₹": "INR", "₫": "VND", "฿": "THB", "CA$": "CAD", "C$": "CAD" };
+export const aliases = { "¥": "CNY", "￥": "CNY", RMB: "CNY", "$": "USD", "HK$": "HKD", "€": "EUR", "£": "GBP", "₽": "RUB", "₣": "CHF", "₹": "INR", "₫": "VND", "฿": "THB", "CA$": "CAD", "C$": "CAD" };
 let cachedRates;
 let expiresAt = 0;
 

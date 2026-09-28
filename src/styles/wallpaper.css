@@ -1,0 +1,37 @@
+/* Bing 壁纸背景层：图片铺满应用根节点，叠加可读性遮罩。 */
+
+.monitor-app.has-wallpaper {
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+.wallpaper-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(244, 244, 245, 0.82) 0%, rgba(244, 244, 245, 0.66) 40%, rgba(244, 244, 245, 0.88) 100%);
+}
+
+.monitor-app.is-dark .wallpaper-overlay {
+  background: linear-gradient(180deg, rgba(15, 18, 26, 0.8) 0%, rgba(15, 18, 26, 0.62) 40%, rgba(15, 18, 26, 0.86) 100%);
+}
+
+.monitor-app.mc-theme .wallpaper-overlay {
+  background: linear-gradient(180deg, rgba(32, 38, 44, 0.84) 0%, rgba(32, 38, 44, 0.68) 40%, rgba(32, 38, 44, 0.9) 100%);
+}
+
+/* 壁纸生效时，页头与主体内容需要抬升到遮罩之上。 */
+.monitor-app.has-wallpaper .header,
+.monitor-app.has-wallpaper main,
+.monitor-app.has-wallpaper section,
+.monitor-app.has-wallpaper .details-page {
+  position: relative;
+  z-index: 1;
+}
+
+.wallpaper-switching .wallpaper-overlay {
+  transition: background 0.4s ease;
+}
