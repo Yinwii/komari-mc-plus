@@ -499,7 +499,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
     />
     <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" @open-calc="openCalcCard" />
     <ValueCalculatorModal v-if="calcCardUuids.length" :nodes="nodes" :initial-uuids="calcCardUuids" @close="calcCardUuids = []" />
-    <VisitorCard />
+    <VisitorCard :enabled="settings.showVisitorCard !== false" :auto-collapse="settings.visitorAutoCollapse" />
     <Transition name="toast-fade">
       <p v-if="toast" class="app-toast" role="status" aria-live="polite">{{ toast }}</p>
     </Transition>

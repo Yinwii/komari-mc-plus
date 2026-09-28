@@ -1,13 +1,19 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Building2, ChevronDown, Clock, Globe, MapPin, Monitor, Network, X } from "lucide-vue-next";
 
 /**
  * 访客信息卡片：
  * - 默认展开在左下角，可收纳为贴边小按钮，也可直接关闭（刷新后重新显示）；
  * - "今日不再显示"按本地日期记忆（localStorage），当天刷新不再弹出；
+ * - 展开后按后台设置的秒数自动收纳（默认 5 秒，0=不自动收纳），悬停卡片暂停倒计时；
  * - IP / 归属地 / ISP 通过公共 IP 信息接口获取，失败时对应行显示"未知"。
  */
+
+const props = defineProps({
+  enabled: { type: Boolean, default: true },
+  autoCollapse: { type: [Number, String], default: 5 },
+});
 
 const STORE_KEY = "komari-visitor-card-v1";
 // mode: "open" 展开 | "mini" 收纳贴边；"closed-today" 按天隐藏
@@ -15,6 +21,30 @@ const STORE_KEY = "komari-visitor-card-v1";
 const state = ref(readState());
 const info = ref(null);
 const infoFailed = ref(false);
+
+// 自动收纳秒数：0 或无效值表示不自动收纳；悬停暂停、离开恢复。
+const collapseSeconds = computed(() => {
+  const n = Math.round(Number(props.autoCollapse));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+});
+let collapseTimer = null;
+const hovering = ref(false);
+
+function stopAutoCollapse() {
+  if (collapseTimer) {
+    clearTimeout(collapseTimer);
+    collapseTimer = null;
+  }
+}
+function scheduleAutoCollapse() {
+  stopAutoCollapse();
+  if (state.value.mode === "open" && collapseSeconds.value > 0 && !hovering.value) {
+    collapseTimer = setTimeout(() => {
+      collapseTimer = null;
+      collapse();
+    }, collapseSeconds.value * 1000);
+  }
+}
 
 const today = () => {
   const now = new Date();
@@ -40,7 +70,7 @@ function persistState() {
 }
 
 const mode = computed(() => state.value.mode);
-const visible = computed(() => mode.value !== "closed-today" && !sessionClosed.value);
+const visible = computed(() => props.enabled && mode.value !== "closed-today" && !sessionClosed.value);
 const sessionClosed = ref(false);
 
 function collapse() {
@@ -59,6 +89,12 @@ function closeToday() {
   state.value = { mode: "closed-today" };
   persistState();
 }
+
+// 展开时启动自动收纳倒计时，收纳/关闭时停止（immediate 覆盖初始即展开的场景）。
+watch([mode, collapseSeconds], ([m]) => {
+  if (m === "open") scheduleAutoCollapse();
+  else stopAutoCollapse();
+}, { immediate: true });
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
@@ -153,7 +189,10 @@ onMounted(() => {
     });
 });
 
-onBeforeUnmount(() => abortController?.abort());
+onBeforeUnmount(() => {
+  abortController?.abort();
+  stopAutoCollapse();
+});
 </script>
 
 <template>
@@ -168,7 +207,14 @@ onBeforeUnmount(() => abortController?.abort());
       <Network :size="16" :stroke-width="1.8" aria-hidden="true" />
     </button>
     <transition name="visitor-pop">
-      <section v-if="mode === 'open'" class="visitor-card" role="dialog" aria-label="访客信息">
+      <section
+        v-if="mode === 'open'"
+        class="visitor-card"
+        role="dialog"
+        aria-label="访客信息"
+        @mouseenter="hovering = true; stopAutoCollapse()"
+        @mouseleave="hovering = false; scheduleAutoCollapse()"
+      >
         <header class="visitor-head">
           <div class="visitor-avatar"><Network :size="17" :stroke-width="2" aria-hidden="true" /></div>
           <div class="visitor-title">

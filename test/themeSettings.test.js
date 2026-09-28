@@ -17,6 +17,10 @@ test("后台配置从公开 RPC 读取，非法值回退且 false 不被默认�
   t.after(resetRpcClientForTests);
   const settings = await fetchThemeSettings();
   assert.equal(settings.showAssets, false);
+  assert.equal(settings.showVisitorCard, true, "访客卡片默认显示");
+  assert.equal(settings.visitorAutoCollapse, "5", "访客卡片默认 5 秒自动收纳");
+  assert.equal(normalizeSettings({ showVisitorCard: false, visitorAutoCollapse: "0" }).showVisitorCard, false);
+  assert.equal(normalizeSettings({ visitorAutoCollapse: "0" }).visitorAutoCollapse, "0");
   assert.equal(settings.showOnline, true);
   // 升级后忽略后台残留的旧外观配置。
   for (const key of ["defaultAppearance", "assetCurrency", "backgroundImage"]) assert.equal(key in settings, false);

@@ -33,6 +33,12 @@
   z-index: 1;
 }
 
+/* 例外：详情页 hero（含主机切换下拉清单）必须始终高于后续信息面板，
+   否则上面的 section 规则把它压回 z-index:1，菜单被后面的面板盖住。 */
+.monitor-app.has-wallpaper .details-hero {
+  z-index: 6;
+}
+
 .wallpaper-switching .wallpaper-overlay {
   transition: background 0.4s ease;
 }
@@ -74,9 +80,9 @@
 
 .monitor-app.has-wallpaper:not(.mc-theme) .host-menu,
 .monitor-app.has-wallpaper:not(.mc-theme) .chart-tooltip {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
 }
 
 .monitor-app.has-wallpaper:not(.mc-theme) .value-panel {
