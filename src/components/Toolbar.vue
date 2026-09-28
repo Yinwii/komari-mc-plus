@@ -3,7 +3,7 @@ import { Box, Images, Moon, RefreshCw, Settings, Sun, Wallet } from "lucide-vue-
 
 const adminUrl = __KOMARI_ADMIN_URL__;
 
-defineProps({ appearance: { type: String, required: true }, isLoading: Boolean, wallpaperOn: Boolean });
+defineProps({ appearance: { type: String, required: true }, isLoading: Boolean, wallpaperOn: Boolean, wallpaperBusy: Boolean });
 defineEmits(["set-appearance", "refresh", "open-admin", "open-value", "switch-wallpaper", "toggle-wallpaper"]);
 </script>
 
@@ -12,9 +12,11 @@ defineEmits(["set-appearance", "refresh", "open-admin", "open-value", "switch-wa
     <button title="剩余价值评估" aria-label="剩余价值评估" @click="$emit('open-value')"><Wallet :size="17" :stroke-width="1.8" aria-hidden="true" /></button>
     <button title="刷新数据" aria-label="刷新数据" :disabled="isLoading" @click="$emit('refresh')"><RefreshCw :class="{ 'is-spinning': isLoading }" :size="17" :stroke-width="1.8" aria-hidden="true" /></button>
     <button
-      title="Bing 壁纸：点击换一张，右键开/关壁纸"
+      :title="wallpaperBusy ? '正在切换壁纸…' : 'Bing 壁纸：点击换一张，右键开/关壁纸'"
       aria-label="切换 Bing 壁纸"
-      :class="{ 'theme-active': wallpaperOn }"
+      :aria-busy="wallpaperBusy"
+      :disabled="wallpaperBusy"
+      :class="{ 'theme-active': wallpaperOn, 'is-busy': wallpaperBusy }"
       @click="$emit('switch-wallpaper')"
       @contextmenu.prevent="$emit('toggle-wallpaper')"
     >

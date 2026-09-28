@@ -100,20 +100,39 @@ function openCalcCard(uuid) {
   calcCardUuids.value = [uuid];
 }
 const wallpaper = ref(loadWallpaperState());
+const wallpaperSwitching = ref(false);
+const toast = ref("");
+let toastTimer = 0;
+function showToast(message, ms = 2600) {
+  toast.value = message;
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toast.value = "";
+  }, ms);
+}
 const wallpaperStyle = computed(() => {
   const url = wallpaper.value.enabled ? wallpaper.value.url : "";
   return url ? { backgroundImage: `url("${url}")` } : {};
 });
 async function onSwitchWallpaper() {
-  const next = await switchBingWallpaper();
-  if (next) {
-    wallpaper.value = { ...loadWallpaperState() };
-  } else {
-    console.warn("[Wallpaper] 所有 Bing 图源均不可用");
+  if (wallpaperSwitching.value) return;
+  wallpaperSwitching.value = true;
+  try {
+    const next = await switchBingWallpaper();
+    if (next) {
+      wallpaper.value = { ...loadWallpaperState() };
+      showToast(`已切换壁纸：${next.title || "Bing 壁纸"}`);
+    } else {
+      console.warn("[Wallpaper] 所有 Bing 图源均不可用");
+      showToast("壁纸源暂时不可用，稍后再试（右键可关闭壁纸）");
+    }
+  } finally {
+    wallpaperSwitching.value = false;
   }
 }
 function onToggleWallpaper() {
   wallpaper.value = setWallpaperEnabled(!wallpaper.value.enabled);
+  showToast(wallpaper.value.enabled ? "已开启 Bing 壁纸" : "已关闭壁纸");
 }
 const activeGroup = ref("all");
 const VIEW_MODE_KEY = "komari-view-mode";
@@ -366,6 +385,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
         :appearance="appearance"
         :is-loading="isLoading"
         :wallpaper-on="wallpaper.enabled"
+        :wallpaper-busy="wallpaperSwitching"
         @set-appearance="setAppearance"
         @refresh="refreshData"
         @open-admin="syncAdminAppearance(appearance)"
@@ -423,5 +443,8 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
     <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" />
     <ValueCalculatorModal v-if="calcCardUuids.length" :nodes="nodes" :initial-uuids="calcCardUuids" @close="calcCardUuids = []" />
     <VisitorCard />
+    <Transition name="toast-fade">
+      <p v-if="toast" class="app-toast" role="status" aria-live="polite">{{ toast }}</p>
+    </Transition>
   </div>
 </template>

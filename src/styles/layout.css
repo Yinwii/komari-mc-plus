@@ -94,3 +94,46 @@ body {
 @keyframes refresh-spin {
   to { transform: rotate(360deg); }
 }
+
+/* 切换壁纸中的图标脉冲，点击后立即有视觉反馈 */
+.toolbar button.is-busy svg {
+  animation: wallpaper-pulse 1s ease-in-out infinite;
+}
+
+@keyframes wallpaper-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.86); }
+}
+
+/* 轻提示：壁纸切换结果 / 开关状态 */
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  z-index: 60;
+  transform: translateX(-50%);
+  max-width: min(88vw, 460px);
+  margin: 0;
+  padding: 9px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(28, 36, 50, 0.9);
+  color: #f4f7fb;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(20, 30, 45, 0.28);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+}
