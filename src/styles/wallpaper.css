@@ -202,3 +202,27 @@
 :root:has(.monitor-app.has-wallpaper)::-webkit-scrollbar {
   display: none;
 }
+
+/* 壁纸模式节点列表：去掉双层白玻璃，容器单层玻璃 + 表体透明，行间留白更清晰 */
+.monitor-app.has-wallpaper:not(.mc-theme) .node-table-wrap {
+  background-color: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .node-table {
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .node-table th {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .node-table-wrap {
+  background-color: rgba(23, 34, 49, 0.5);
+}
+
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .node-table {
+  background-color: transparent;
+}
