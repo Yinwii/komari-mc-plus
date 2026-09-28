@@ -155,6 +155,16 @@ export async function fetchSnapshot() {
   return { nodes };
 }
 
+/** 扁平记录的负载字段：`load` 即 1 分钟负载，兼容个别版本返回嵌套对象。 */
+function normalizeFlatLoad(record) {
+  if (record.load && typeof record.load === "object") return record.load;
+  return {
+    load1: optionalNumber(record.load),
+    load5: optionalNumber(record.load5),
+    load15: optionalNumber(record.load15),
+  };
+}
+
 function normalizeLatestRecord(record) {
   if (!record) return [];
   if (Array.isArray(record)) return record;
@@ -167,6 +177,9 @@ function normalizeLatestRecord(record) {
     ram: { used: Number(record.ram) || 0, total: Number(record.ram_total) || 0 },
     swap: { used: Number(record.swap) || 0, total: Number(record.swap_total) || 0 },
     disk: { used: Number(record.disk) || 0, total: Number(record.disk_total) || 0 },
+    // Komari 的 getNodesLatestStatus 返回扁平字段 load/load5/load15，
+    // 此前未映射导致实时刷新后平均负载始终显示"暂无数据"。
+    load: normalizeFlatLoad(record),
     network: {
       up: Number(record.net_out) || 0,
       down: Number(record.net_in) || 0,

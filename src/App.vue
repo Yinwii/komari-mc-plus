@@ -7,6 +7,7 @@ import NodeCard from "./components/NodeCard.vue";
 import NodeListView from "./components/NodeListView.vue";
 import NodeDetails from "./components/NodeDetails.vue";
 import RemainingValuePanel from "./components/RemainingValuePanel.vue";
+import VisitorCard from "./components/VisitorCard.vue";
 import { LayoutGrid, Rows3 } from "lucide-vue-next";
 import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRealtime, toNodeModel } from "./services/komariApi.js";
 import { getRpcTransportState } from "./services/rpc.js";
@@ -100,6 +101,16 @@ const isLoading = ref(true);
 const groups = ref([]);
 const nodes = ref([]);
 const overview = computed(() => getOverviewFromNodes(nodes.value));
+// 实时速率历史（字节/秒），供总览"实时速率"卡片绘制迷你走势图。
+const SPEED_HISTORY_MAX = 60;
+const speedHistory = ref([]);
+watch(nodes, () => {
+  const up = nodes.value.reduce((sum, node) => sum + (Number(node.up) || 0), 0);
+  const down = nodes.value.reduce((sum, node) => sum + (Number(node.down) || 0), 0);
+  const last = speedHistory.value[speedHistory.value.length - 1];
+  if (last && last.up === up && last.down === down) return;
+  speedHistory.value = [...speedHistory.value, { up, down }].slice(-SPEED_HISTORY_MAX);
+});
 const filteredNodes = ref(nodes.value);
 const errorMessage = ref("");
 let refreshTimer;
@@ -212,6 +223,16 @@ onMounted(() => {
     selectGroup("all");
     if (window.location.hash === "#demo-value") showValuePanel.value = true;
     if (window.location.hash === "#demo-detail") openNode(nodes.value[0]);
+    // 演示模式：轻微抖动速率，驱动实时速率走势图与轮询观感。
+    if (!window.location.hash.startsWith("#demo-static")) {
+      setInterval(() => {
+        nodes.value = nodes.value.map((node) => ({
+          ...node,
+          up: String(Math.max(0, Number(node.up) + (Math.random() - 0.4) * 4096)),
+          down: String(Math.max(0, Number(node.down) + (Math.random() - 0.4) * 12288)),
+        }));
+      }, 2000);
+    }
   }
 });
 onBeforeUnmount(() => {
@@ -314,7 +335,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
       <p>加载节点...</p>
     </section>
     <main v-else-if="!selectedNode" :aria-busy="isLoading">
-      <OverviewCards :overview="overview" :settings="settings" />
+      <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" />
       <p v-if="settingsError" class="data-error" role="alert">{{ settingsError }}</p>
       <p v-if="errorMessage" class="data-error" role="alert">{{ errorMessage }}</p>
       <div class="node-filters">
@@ -351,5 +372,6 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
       @open-value="showValuePanel = true"
     />
     <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" />
+    <VisitorCard />
   </div>
 </template>

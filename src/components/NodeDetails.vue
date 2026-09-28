@@ -4,7 +4,7 @@ import AppIcon from "./AppIcon.vue";
 import SystemIcon from "./SystemIcon.vue";
 import { getNodeStatus, getNodeStatusLabel } from "../utils/nodeStatus.js";
 import { formatByteRate, formatCost, formatExpiry } from "../utils/format.js";
-import { computeNodeValue, cycleLabel } from "../utils/valueCalc.js";
+import { computeNodeValue, cycleLabel, CYCLE_OPTIONS } from "../utils/valueCalc.js";
 import { fetchNodeHistory } from "../services/nodeHistory.js";
 import { fetchNodePingData } from "../services/komariApi.js";
 import LoadCharts from "./LoadCharts.vue";
@@ -100,22 +100,96 @@ const billing = computed(() => {
   };
 });
 
-/** 单台节点的剩余价值计算：与总面板共用 valueCalc 口径，并读取同一份手动修正记录。 */
+/** 手动修正记录：与总面板共用同一份 localStorage，可在此可视化调整并实时重算。 */
+const OVERRIDES_KEY = "komari-value-overrides-v1";
+const override = ref({});
+const showValueEditor = ref(false);
+
+function readOverridesAll() {
+  try {
+    return JSON.parse(localStorage.getItem(OVERRIDES_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function loadOverride() {
+  override.value = readOverridesAll()[props.node.uuid] || {};
+}
+
+function applyOverride(patch) {
+  const all = readOverridesAll();
+  all[props.node.uuid] = { ...all[props.node.uuid], ...patch };
+  try {
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(all));
+  } catch {
+    // 存储不可用时仅本次会话生效。
+  }
+  override.value = all[props.node.uuid];
+}
+
+function resetOverride() {
+  const all = readOverridesAll();
+  delete all[props.node.uuid];
+  try {
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(all));
+  } catch {
+    // 忽略存储异常。
+  }
+  override.value = {};
+}
+
+watch(() => props.node.uuid, loadOverride, { immediate: true });
+
+const effectiveBilling = computed(() => {
+  const node = props.node;
+  const o = override.value;
+  return {
+    price: Number(o.price ?? (node.price > 0 ? node.price : 0)) || 0,
+    cycle: Number(o.cycle ?? (Number(node.billingCycle) || 0)),
+    expiry: String(o.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),
+    market: Number(o.market ?? 0) || 0,
+  };
+});
+
+/** 计算器编辑框的临时值：打开时从当前生效值初始化，change 时写回修正记录。 */
+const editor = ref({ price: "", cycle: 0, expiry: "", market: "" });
+
+function toggleValueEditor() {
+  showValueEditor.value = !showValueEditor.value;
+  if (showValueEditor.value) {
+    const row = effectiveBilling.value;
+    editor.value = {
+      price: row.price ? String(row.price) : "",
+      cycle: row.cycle,
+      expiry: row.expiry,
+      market: row.market ? String(row.market) : "",
+    };
+    loadOverride();
+  }
+}
+
+function onEditorChange(patch) {
+  const clean = {};
+  if ("price" in patch) clean.price = Math.max(0, Number(patch.price) || 0);
+  if ("cycle" in patch) clean.cycle = Number(patch.cycle) || 0;
+  if ("expiry" in patch) clean.expiry = String(patch.expiry || "");
+  if ("market" in patch) clean.market = Math.max(0, Number(patch.market) || 0);
+  applyOverride(clean);
+  const row = { ...editor.value, ...clean };
+  editor.value = {
+    price: row.price ? String(row.price) : "",
+    cycle: Number(row.cycle) || 0,
+    expiry: String(row.expiry || ""),
+    market: row.market ? String(row.market) : "",
+  };
+}
+
 const valueSummary = computed(() => {
   const node = props.node;
-  let override = {};
-  try {
-    override = JSON.parse(localStorage.getItem("komari-value-overrides-v1") || "{}")[node.uuid] || {};
-  } catch {
-    override = {};
-  }
-  const currency = String(node.currency || "¥").trim() || "¥";
-  const price = Number(override.price ?? (node.price > 0 ? node.price : 0)) || 0;
-  const cycle = Number(override.cycle ?? (Number(node.billingCycle) || 0));
-  const expiry = String(override.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : ""));
-  const market = Number(override.market ?? 0) || 0;
+  const row = effectiveBilling.value;
   const item = computeNodeValue(
-    { uuid: node.uuid, name: node.name, currency, price, billingCycle: cycle, expiredAt: expiry || null, market },
+    { uuid: node.uuid, name: node.name, currency: String(node.currency || "¥").trim() || "¥", price: row.price, billingCycle: row.cycle, expiredAt: row.expiry || null, market: row.market },
     Date.now(),
   );
   const money = (value) => `${item.currency}${value.toFixed(2)}`;
@@ -243,6 +317,33 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
           <div><span><AppIcon name="wallet" /> 剩余价值</span><b class="is-value">{{ valueSummary.remaining }}</b></div>
           <div><span><AppIcon name="activity" /> 日均成本</span><b>{{ valueSummary.daily }}</b></div>
           <div><span><AppIcon name="wallet" /> 溢价（市价 − 残值）</span><b :class="valueSummary.premiumClass">{{ valueSummary.premium }}</b></div>
+        </div>
+        <button class="details-value-open" type="button" @click="toggleValueEditor">
+          {{ showValueEditor ? "收起调整计算 ▲" : "调整计算（单价 / 周期 / 到期 / 市价）▼" }}
+        </button>
+        <div v-if="showValueEditor" class="details-value-editor">
+          <label>
+            <span>单价</span>
+            <span class="value-input-wrap"><em>{{ String(node.currency || "¥").trim() || "¥" }}</em><input type="number" min="0" step="0.01" placeholder="0.00" :value="editor.price" @change="onEditorChange({ price: $event.target.value })" /></span>
+          </label>
+          <label>
+            <span>计费周期</span>
+            <select class="value-input" :value="editor.cycle" @change="onEditorChange({ cycle: $event.target.value })">
+              <option v-for="option in [{ value: 0, label: '未设置' }, ...CYCLE_OPTIONS]" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+          </label>
+          <label>
+            <span>到期日</span>
+            <input class="value-input" type="date" :value="editor.expiry" @change="onEditorChange({ expiry: $event.target.value })" />
+          </label>
+          <label>
+            <span>参考市价</span>
+            <input class="value-input" type="number" min="0" step="0.01" placeholder="可选" :value="editor.market" @change="onEditorChange({ market: $event.target.value })" />
+          </label>
+          <div class="details-value-editor-actions">
+            <button type="button" class="is-reset" @click="resetOverride">恢复面板默认</button>
+            <small>修改即时生效，并与剩余价值总面板共用记录</small>
+          </div>
         </div>
         <button class="details-value-open" type="button" @click="$emit('open-value')">打开剩余价值计算器（全部节点汇总）→</button>
       </section>

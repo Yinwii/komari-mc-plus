@@ -113,7 +113,7 @@ test("总览独立开关只渲染所选卡片，关闭全部时不留空统计�
     const settings = normalizeSettings({ showOnline: false, showAssets: false, showTraffic: false });
     const props = { settings, overview: { bandwidth: { value: "1", unit: "MB/s" } } };
     const html = await renderToString(createSSRApp(Overview, props));
-    assert.equal((html.match(/class="overview-card"/g) || []).length, 1);
+    assert.equal((html.match(/class="overview-card[ "]/g) || []).length, 1);
     assert.match(html, /实时速率/);
     settings.showSpeed = false;
     assert.doesNotMatch(await renderToString(createSSRApp(Overview, props)), /overview-grid/);

@@ -12,11 +12,12 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(244, 244, 245, 0.82) 0%, rgba(244, 244, 245, 0.66) 40%, rgba(244, 244, 245, 0.88) 100%);
+  /* 降低遮罩浓度，让壁纸更清晰可见；可读性由下方半透明卡片负责。 */
+  background: linear-gradient(180deg, rgba(244, 244, 245, 0.52) 0%, rgba(244, 244, 245, 0.38) 40%, rgba(244, 244, 245, 0.62) 100%);
 }
 
 .monitor-app.is-dark .wallpaper-overlay {
-  background: linear-gradient(180deg, rgba(15, 18, 26, 0.8) 0%, rgba(15, 18, 26, 0.62) 40%, rgba(15, 18, 26, 0.86) 100%);
+  background: linear-gradient(180deg, rgba(15, 18, 26, 0.55) 0%, rgba(15, 18, 26, 0.42) 40%, rgba(15, 18, 26, 0.66) 100%);
 }
 
 .monitor-app.mc-theme .wallpaper-overlay {
@@ -34,4 +35,66 @@
 
 .wallpaper-switching .wallpaper-overlay {
   transition: background 0.4s ease;
+}
+
+/* ---- 壁纸生效时模块半透明：毛玻璃卡片透出壁纸，MC 主题保持独立材质不受影响 ---- */
+
+.monitor-app.has-wallpaper:not(.mc-theme) .header {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .overview-grid,
+.monitor-app.has-wallpaper:not(.mc-theme) .group-bar,
+.monitor-app.has-wallpaper:not(.mc-theme) .node-card,
+.monitor-app.has-wallpaper:not(.mc-theme) .info-panel,
+.monitor-app.has-wallpaper:not(.mc-theme) .details-panel {
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .chart-card {
+  background-color: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .node-table-wrap,
+.monitor-app.has-wallpaper:not(.mc-theme) .node-table {
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .node-table th {
+  background: rgba(248, 250, 252, 0.6);
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .host-menu,
+.monitor-app.has-wallpaper:not(.mc-theme) .chart-tooltip {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.monitor-app.has-wallpaper:not(.mc-theme) .value-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+}
+
+/* 深色主题的半透明表面 */
+.monitor-app.is-dark.has-wallpaper .header {
+  background: rgba(23, 34, 49, 0.55);
+}
+
+.monitor-app.is-dark.has-wallpaper .overview-grid,
+.monitor-app.is-dark.has-wallpaper .group-bar,
+.monitor-app.is-dark.has-wallpaper .node-card,
+.monitor-app.is-dark.has-wallpaper .info-panel,
+.monitor-app.is-dark.has-wallpaper .details-panel,
+.monitor-app.is-dark.has-wallpaper .chart-card {
+  background: rgba(23, 34, 49, 0.6);
 }

@@ -136,3 +136,28 @@
 .monitor-app .overview-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
 }
+
+/* 速率卡片迷你走势图：铺在卡片底部，不干扰文字 */
+.overview-card.has-spark {
+  padding-bottom: 44px;
+}
+
+.overview-card.has-spark p {
+  position: relative;
+  z-index: 1;
+}
+
+.speed-spark {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 38px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.monitor-app.is-dark .speed-spark {
+  opacity: 0.85;
+}

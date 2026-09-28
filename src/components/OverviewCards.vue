@@ -1,7 +1,39 @@
 <script setup>
+import { computed } from "vue";
 import AppIcon from "./AppIcon.vue";
 
-defineProps({ overview: { type: Object, required: true }, settings: { type: Object, required: true } });
+const props = defineProps({
+  overview: { type: Object, required: true },
+  settings: { type: Object, required: true },
+  speedHistory: { type: Array, default: () => [] },
+});
+
+// 参考 komari-theme-ink：速率卡片底部绘制上行/下行迷你面积走势图。
+const SPARK_W = 100;
+const SPARK_H = 30;
+
+function buildSeries(key) {
+  return props.speedHistory.map((point) => Math.max(0, Number(point[key]) || 0));
+}
+
+function makePaths(series) {
+  if (series.length < 2) return null;
+  const max = Math.max(...series, 1);
+  const step = SPARK_W / (series.length - 1);
+  const points = series.map((value, index) => [
+    index * step,
+    SPARK_H - 2 - (value / max) * (SPARK_H - 5),
+  ]);
+  const line = points.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+  const area = `${line} L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z`;
+  return { line, area };
+}
+
+const downSeries = computed(() => buildSeries("down"));
+const upSeries = computed(() => buildSeries("up"));
+const downPaths = computed(() => makePaths(downSeries.value));
+const upPaths = computed(() => makePaths(upSeries.value));
+const sparkReady = computed(() => Boolean(downPaths.value && upPaths.value));
 </script>
 
 <template>
@@ -33,7 +65,7 @@ defineProps({ overview: { type: Object, required: true }, settings: { type: Obje
       </p>
       <span class="overview-icon"><AppIcon name="database" :size="22" /></span>
     </div>
-    <div v-if="settings.showSpeed" class="overview-card">
+    <div v-if="settings.showSpeed" class="overview-card has-spark">
       <div class="overview-label">实时速率</div>
       <div class="overview-value orange-text">
         {{ overview.bandwidth.value
@@ -44,6 +76,22 @@ defineProps({ overview: { type: Object, required: true }, settings: { type: Obje
         ·
         <span class="bandwidth-download"><AppIcon name="download" /> {{ overview.bandwidth.download }}</span>
       </p>
+      <svg v-if="sparkReady" class="speed-spark" :viewBox="`0 0 ${SPARK_W} ${SPARK_H}`" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="spark-down" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3467bd" stop-opacity="0.35" />
+            <stop offset="100%" stop-color="#3467bd" stop-opacity="0.02" />
+          </linearGradient>
+          <linearGradient id="spark-up" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0f9f72" stop-opacity="0.32" />
+            <stop offset="100%" stop-color="#0f9f72" stop-opacity="0.02" />
+          </linearGradient>
+        </defs>
+        <path :d="downPaths.area" fill="url(#spark-down)" />
+        <path :d="downPaths.line" fill="none" stroke="#3467bd" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+        <path :d="upPaths.area" fill="url(#spark-up)" />
+        <path :d="upPaths.line" fill="none" stroke="#0f9f72" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+      </svg>
       <span class="overview-icon"><AppIcon name="activity" :size="22" /></span>
     </div>
   </section>

@@ -1,0 +1,235 @@
+/* 访客信息卡片：左下角玻璃拟态浮层，可收纳为贴边圆钮。 */
+
+.visitor-layer {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 150;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.visitor-card,
+.visitor-mini {
+  pointer-events: auto;
+}
+
+.visitor-card {
+  width: 248px;
+  padding: 13px 14px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 12px 32px rgba(18, 28, 45, 0.18);
+  color: #26313c;
+  animation: visitor-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes visitor-enter {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.visitor-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.visitor-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #4f8fdd, #12855c);
+  color: #fff;
+}
+
+.visitor-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.visitor-title b {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.visitor-title small {
+  display: block;
+  margin-top: 2px;
+  color: #6b7688;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visitor-head-actions {
+  display: flex;
+  gap: 2px;
+  margin: -2px -4px 0 0;
+}
+
+.visitor-action {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #7a8698;
+  cursor: pointer;
+}
+
+.visitor-action:hover {
+  background: rgba(38, 49, 60, 0.08);
+  color: #26313c;
+}
+
+.visitor-list {
+  margin: 11px 0 0;
+  padding: 9px 2px 0;
+  border-top: 1px solid rgba(38, 49, 60, 0.08);
+  list-style: none;
+}
+
+.visitor-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3.5px 0;
+  font-size: 12px;
+  color: #3d4757;
+}
+
+.visitor-list li .lucide,
+.visitor-list li svg {
+  flex: 0 0 auto;
+  color: #12855c;
+}
+
+.visitor-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visitor-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.visitor-foot button {
+  border: 0;
+  padding: 3px 6px;
+  background: transparent;
+  color: #93a0b3;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.visitor-foot button:hover {
+  color: #6b7688;
+  background: rgba(38, 49, 60, 0.06);
+}
+
+/* 收纳态：贴边小圆钮 */
+.visitor-mini {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 20px rgba(18, 28, 45, 0.18);
+  color: #3d4757;
+  cursor: pointer;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.visitor-mini:hover {
+  transform: translateY(-2px);
+  color: #12855c;
+}
+
+/* 进出场动画 */
+.visitor-pop-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.visitor-pop-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.visitor-pop-enter-from,
+.visitor-pop-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+}
+
+/* 深色主题 */
+.monitor-app.is-dark .visitor-card {
+  border-color: rgba(120, 150, 190, 0.22);
+  background: rgba(23, 34, 49, 0.78);
+  color: #e7eef7;
+  box-shadow: 0 12px 32px rgba(4, 10, 20, 0.5);
+}
+
+.monitor-app.is-dark .visitor-title small,
+.monitor-app.is-dark .visitor-list li {
+  color: #b7c9dc;
+}
+
+.monitor-app.is-dark .visitor-list li svg {
+  color: #59d4c5;
+}
+
+.monitor-app.is-dark .visitor-list,
+.monitor-app.is-dark .visitor-foot {
+  border-top-color: rgba(150, 180, 220, 0.12);
+}
+
+.monitor-app.is-dark .visitor-action,
+.monitor-app.is-dark .visitor-foot button,
+.monitor-app.is-dark .visitor-mini {
+  color: #9aaabd;
+}
+
+.monitor-app.is-dark .visitor-action:hover {
+  background: rgba(150, 180, 220, 0.12);
+  color: #e7eef7;
+}
+
+.monitor-app.is-dark .visitor-foot button:hover {
+  background: rgba(150, 180, 220, 0.1);
+  color: #c9d7e8;
+}
+
+.monitor-app.is-dark .visitor-mini {
+  background: rgba(23, 34, 49, 0.78);
+  border-color: rgba(120, 150, 190, 0.22);
+}
+
+.monitor-app.is-dark .visitor-mini:hover {
+  color: #59d4c5;
+}
+
+@media (max-width: 720px) {
+  .visitor-layer { left: 10px; bottom: 10px; }
+  .visitor-card { width: min(248px, calc(100vw - 20px)); }
+}
