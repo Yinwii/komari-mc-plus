@@ -9,6 +9,7 @@ import { fetchNodeHistory } from "../services/nodeHistory.js";
 import { fetchNodePingData } from "../services/komariApi.js";
 import LoadCharts from "./LoadCharts.vue";
 import PingCharts from "./PingCharts.vue";
+import UptimeTimeline from "./UptimeTimeline.vue";
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -84,6 +85,68 @@ const loadInfo = computed(() => {
   const entries = [["1m", props.node.load1], ["5m", props.node.load5], ["15m", props.node.load15]];
   if (!entries.some(([, value]) => Number.isFinite(value))) return null;
   return entries.map(([label, value]) => ({ label, value: Number.isFinite(value) ? value.toFixed(2) : "--" }));
+});
+
+/** 资源概览卡：CPU/内存/硬盘/流量，进度条颜色跟随健康阈值。 */
+function thresholdClass(percent) {
+  const value = Number(percent);
+  if (!Number.isFinite(value)) return "";
+  if (value >= 85) return "is-critical";
+  if (value >= 60) return "is-warning";
+  return "";
+}
+
+const resourceCards = computed(() => {
+  const node = props.node;
+  const cards = [
+    {
+      key: "cpu",
+      label: "CPU",
+      percent: Number(node.cpu),
+      text: Number.isFinite(Number(node.cpu)) ? `${Number(node.cpu).toFixed(1)}%` : "暂无数据",
+      sub: loadInfo.value ? `负载 ${loadInfo.value.map((item) => item.value).join(" · ")}` : "",
+      cores: node.cores ? `${node.cores} vCPU` : "",
+    },
+    {
+      key: "memory",
+      label: "内存",
+      percent: Number(node.memory),
+      text: node.memoryText || "暂无数据",
+      sub: node.swapText ? `Swap ${node.swapText}` : "",
+    },
+    {
+      key: "disk",
+      label: "硬盘",
+      percent: Number(node.disk),
+      text: node.diskText || "暂无数据",
+      sub: "",
+    },
+    {
+      key: "traffic",
+      label: "流量",
+      percent: null,
+      text: trafficUsage.value ? trafficUsage.value.text : "暂无数据",
+      sub: trafficUsage.value ? trafficUsage.value.percent : "",
+    },
+  ];
+  return cards.map((card) => ({ ...card, tone: thresholdClass(card.percent) }));
+});
+
+/** 系统信息：CPU 型号 / 核心数描述。 */
+const cpuInfoText = computed(() => {
+  const node = props.node;
+  if (!node.cores && !node.cpuName) return null;
+  const cores = node.cores ? (node.cpuPhysicalCores ? `${node.cores} vCPU（${node.cpuPhysicalCores} 物理核心）` : `${node.cores} vCPU`) : "";
+  return [node.cpuName, cores].filter(Boolean).join(" · ") || null;
+});
+
+const tcpUdpText = computed(() => {
+  const node = props.node;
+  if (node.tcpCount === null && node.udpCount === null && node.connectionCount === null) return null;
+  if (node.tcpCount !== null || node.udpCount !== null) {
+    return `TCP ${node.tcpCount ?? "—"} · UDP ${node.udpCount ?? "—"}${node.connectionCount !== null ? `（共 ${node.connectionCount}）` : ""}`;
+  }
+  return `共 ${node.connectionCount}`;
 });
 
 const billing = computed(() => {
@@ -234,6 +297,17 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
         <small>最后更新 <time>{{ node.updatedAt || "--:--:--" }}</time></small>
       </div>
     </section>
+    <div class="details-resource-row">
+      <div v-for="card in resourceCards" :key="card.key" class="resource-card" :class="card.tone">
+        <div class="resource-head">
+          <span><AppIcon :name="card.key === 'cpu' ? 'cpu' : card.key === 'memory' ? 'database' : card.key === 'disk' ? 'disk' : 'network'" /> {{ card.label }}</span>
+          <b>{{ card.text }}<small v-if="card.sub && card.key === 'traffic'"> {{ card.sub }}</small></b>
+        </div>
+        <div v-if="Number.isFinite(card.percent)" class="resource-bar" aria-hidden="true"><i :style="{ width: `${Math.min(100, Math.max(0, card.percent))}%` }" /></div>
+        <small v-if="card.sub && card.key !== 'traffic'" class="resource-sub">{{ [card.sub, card.cores].filter(Boolean).join(" · ") }}</small>
+        <small v-else-if="card.cores" class="resource-sub">{{ card.cores }}</small>
+      </div>
+    </div>
     <div class="details-info-grid">
       <section class="info-panel">
         <h2><AppIcon name="network" /> 网络信息</h2>
@@ -242,19 +316,23 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
           <div><span><AppIcon name="activity" /> 峰值速度</span><b><AppIcon name="upload" /> {{ formatPeak(node.peakUp, node.peakUpAt) }} · <AppIcon name="download" /> {{ formatPeak(node.peakDown, node.peakDownAt) }}</b></div>
           <div><span><AppIcon name="database" /> 累计流量</span><b><AppIcon name="upload" /> {{ node.out }} · <AppIcon name="download" /> {{ node.in }}</b></div>
           <div><span><AppIcon name="database" /> 流量限额</span><b>{{ trafficUsage ? `${trafficUsage.text}${trafficUsage.percent}` : "暂无数据" }}</b></div>
-          <div><span><AppIcon name="network" /> 连接数</span><b>{{ Number.isFinite(node.connectionCount) ? node.connectionCount : "暂无数据" }}</b></div>
+          <div><span><AppIcon name="network" /> 连接数</span><b>{{ tcpUdpText || "暂无数据" }}</b></div>
           <div><span><AppIcon name="server" /> 进程数</span><b>{{ Number.isFinite(node.processCount) ? node.processCount : "暂无数据" }}</b></div>
         </div>
       </section>
       <section class="info-panel">
         <h2><AppIcon name="monitor" /> 系统信息</h2>
         <div class="info-items">
+          <div v-if="cpuInfoText"><span><AppIcon name="cpu" /> 处理器</span><b class="is-wrap" :title="node.cpuName || ''">{{ cpuInfoText }}</b></div>
           <div><span><AppIcon name="server" /> 操作系统</span><b><SystemIcon :system="node.os" /> {{ node.os }}</b></div>
+          <div><span><AppIcon name="binary" /> 架构</span><b>{{ node.architecture || "暂无数据" }}</b></div>
           <div><span><AppIcon name="cpu" /> 内核版本</span><b>{{ node.kernelVersion || "暂无数据" }}</b></div>
           <div><span><AppIcon name="monitor" /> 虚拟化</span><b>{{ node.virtualization || "暂无数据" }}</b></div>
+          <div><span><AppIcon name="database" /> 交换内存</span><b>{{ node.swapText || "未启用 Swap" }}</b></div>
           <div><span><AppIcon name="database" /> 图形设备</span><b>{{ node.gpuName || "暂无数据" }}</b></div>
           <div><span><AppIcon name="clock" /> 运行时间</span><b>{{ node.uptimeText || "暂无数据" }}</b></div>
           <div><span><AppIcon name="activity" /> 平均负载</span><b v-if="loadInfo" class="load-chips"><i v-for="item in loadInfo" :key="item.label">{{ item.label }} {{ item.value }}</i></b><b v-else>暂无数据</b></div>
+          <div v-if="node.lastReportAt"><span><AppIcon name="clock" /> 最后上报</span><b>{{ node.lastReportAt }}</b></div>
         </div>
       </section>
       <section class="info-panel is-billing">
@@ -272,6 +350,7 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
         </div>
       </section>
     </div>
+    <UptimeTimeline :uuid="node.uuid" />
     <section class="details-panel">
       <div class="chart-toolbar">
         <div class="chart-switch">

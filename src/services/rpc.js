@@ -46,7 +46,15 @@ async function callHttp(method, params, options = {}) {
   return payload.result;
 }
 
+// 演示模式钩子：#demo 下拦截指定 RPC 方法并返回模拟数据（返回 undefined 则走真实请求）。
+let demoHandler = null;
+export function setRpcDemoHandler(handler) { demoHandler = typeof handler === "function" ? handler : null; }
+
 export function callRpc(method, params = {}, options = {}) {
+  if (demoHandler) {
+    const mocked = demoHandler(method, params);
+    if (mocked !== undefined) return Promise.resolve(mocked);
+  }
   client ||= new Rpc2Client();
   return client.call(method, params, options);
 }

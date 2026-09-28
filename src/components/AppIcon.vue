@@ -10,6 +10,7 @@ const paths = {
   arrowDown: "M12 4v15m0 0-5-5m5 5 5-5",
   arrowUp: "M12 20V5m0 0-5 5m5-5 5 5",
   back: "m15 18-6-6 6-6",
+  binary: "M8 5h3v4H8zM13 9h3v4h-3zM8 13h3v4H8z",
   chevronDown: "m6 9 6 6 6-6",
   chevronUp: "m6 15 6-6 6 6",
   clock: "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",

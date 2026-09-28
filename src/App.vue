@@ -11,7 +11,7 @@ import ValueCalculatorModal from "./components/ValueCalculatorModal.vue";
 import VisitorCard from "./components/VisitorCard.vue";
 import { LayoutGrid, Rows3 } from "lucide-vue-next";
 import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRealtime, toNodeModel } from "./services/komariApi.js";
-import { getRpcTransportState } from "./services/rpc.js";
+import { getRpcTransportState, setRpcDemoHandler } from "./services/rpc.js";
 import { calculateAssets, fetchExchangeRates } from "./services/assets.js";
 import { fetchThemeSettings, fetchPublicSiteName, normalizeSettings, resolveAppearance, syncAdminAppearance } from "./services/themeSettings.js";
 import { initWallpaper, loadWallpaperState, setWallpaperEnabled, switchWallpaper as switchBingWallpaper } from "./services/bingWallpaper.js";
@@ -289,6 +289,7 @@ onMounted(() => {
     nodes.value = makeDemoNodes();
     groups.value = getGroupsFromNodes(nodes.value);
     selectGroup("all");
+    setRpcDemoHandler(mockDemoRpc);
     if (window.location.hash === "#demo-value") showValuePanel.value = true;
     if (window.location.hash === "#demo-detail") openNode(nodes.value[0]);
     // 演示模式：轻微抖动速率，驱动实时速率走势图与轮询观感。
@@ -325,11 +326,52 @@ function getGroupsFromNodes(items) {
 }
 
 /** 无后端时的演示数据：访问 #demo / #demo-value 使用，便于预览与联调。 */
-function makeDemoNodes() {
-  const day = 86400000;
+/** 演示模式 RPC 拦截：负载历史（7 天）与 Ping 任务/记录，驱动详情页图表与时间轴。 */
+function mockDemoRpc(method, params) {
+  if (method === "public:getRecordsByUUID" || method === "common:getRecords") {
+    if (params?.type === "ping") return [];
+    const hours = Number(params?.hours) || 1;
+    const count = Math.min(2000, Math.max(30, Math.round(hours * 12)));
+    const now = Date.now();
+    const records = [];
+    for (let i = count; i >= 1; i--) {
+      const time = now - i * 5 * 60_000;
+      // 2 天前留 10 小时「离线缺口」（完全不上报），让在线时间轴出现部分异常色带。
+      const offline = i > (48 + 2) * 12 && i <= (48 + 12) * 12;
+      if (offline) continue;
+      records.push({
+        time: new Date(time).toISOString(),
+        updated_at: new Date(time).toISOString(),
+        cpu: { usage: offline ? 0 : 8 + Math.random() * 20 },
+        ram: { used: (1.2 + Math.random() * 0.4) * 1024 ** 3, total: 4 * 1024 ** 3 },
+        swap: { used: (0.2 + Math.random() * 0.1) * 1024 ** 3, total: 2 * 1024 ** 3 },
+        disk: { used: (20 + Math.random() * 0.5) * 1024 ** 3, total: 80 * 1024 ** 3 },
+        network: { up: 1024 + Math.random() * 4096, down: 4096 + Math.random() * 12288 },
+        connections: { tcp: 10 + Math.round(Math.random() * 10), udp: 3 + Math.round(Math.random() * 5) },
+        process: 90 + Math.round(Math.random() * 10),
+        uptime: 62 * 86400 + 16 * 3600,
+        load: { load1: 0.1 + Math.random() * 0.2, load5: 0.05 + Math.random() * 0.15, load15: 0.02 + Math.random() * 0.1 },
+        online: !offline,
+      });
+    }
+    return records;
+  }
+  if (method === "public:getPublicPingTasks") {
+    return [
+      { id: "demo-ping-1", name: "CMCC", clients: null, type: "icmp" },
+      { id: "demo-ping-2", name: "CU", clients: null, type: "icmp" },
+      { id: "demo-ping-3", name: "CT", clients: null, type: "icmp" },
+    ];
+  }
+  if (method === "public:getPingRecords") return [];
+  return undefined;
+}
+
+function makeDemoNodes() {  const day = 86400000;
   const now = Date.now();
   const demoStats = {
     online: true, cpu: { usage: 12.5 }, ram: { used: 1024 ** 3, total: 4 * 1024 ** 3 },
+    swap: { used: 256 * 1024 ** 2, total: 2 * 1024 ** 3 },
     disk: { used: 20 * 1024 ** 3, total: 80 * 1024 ** 3 },
     network: { up: 2048, down: 8192, totalUp: 34.7 * 1024 ** 3, totalDown: 35.2 * 1024 ** 3 },
     connections: { tcp: 12, udp: 5 }, process: 93, uptime: 62 * 86400 + 16 * 3600,
@@ -338,7 +380,9 @@ function makeDemoNodes() {
   const raw = (over) => ({
     uuid: "demo", name: "demo", region: "", group: "", os: "Debian 12",
     price: 0, currency: "$", billing_cycle: 365, expired_at: null, traffic_limit: 0,
-    cpu_cores: 2, mem_total: 4 * 1024 ** 3, disk_total: 80 * 1024 ** 3,
+    cpu_name: "Intel(R) Xeon(R) Gold 6230R CPU @ 2.10GHz", cpu_cores: 2, cpu_physical_cores: 1,
+    arch: "amd64", virtualization: "kvm", kernel_version: "6.1.0-18-amd64",
+    mem_total: 4 * 1024 ** 3, disk_total: 80 * 1024 ** 3,
     latestStats: demoStats,
     ...over,
   });

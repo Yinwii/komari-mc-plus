@@ -23,7 +23,7 @@ let resizeObserver = null;
 const realtimeRecords = ref([]);
 const definitions = [
   { key: "cpu", label: "CPU", icon: "cpu", color: "#c2546d", value: () => `${props.node.cpu}%`, unit: "%" },
-  { key: "memory", label: "内存", icon: "database", color: "#20a9b0", value: () => props.node.memoryText, unit: "bytes" },
+  { key: "memory", label: "内存与 Swap", icon: "database", color: "#20a9b0", value: () => props.node.swapText ? `${props.node.memoryText} · Swap ${props.node.swapText}` : props.node.memoryText, unit: "bytes", extra: { key: "swap", label: "Swap", color: "#8a7bdd" } },
   { key: "disk", label: "硬盘", icon: "disk", color: "#e28d36", value: () => props.node.diskText, unit: "bytes" },
   { key: "connections", label: "连接 / 进程", icon: "network", color: "#4b75ed", value: () => `${props.node.connectionCount ?? "暂无数据"} / ${props.node.processCount ?? "暂无数据"}`, unit: "" },
 ];
@@ -32,6 +32,7 @@ const tooltips = ref(definitions.map(() => ({ visible: false, left: 0, top: 0, t
 function valueOf(record, key) {
   if (key === "cpu") return Number(record?.cpu?.usage ?? record?.cpu);
   if (key === "memory") return Number(record?.ram?.used ?? record?.ram);
+  if (key === "swap") return Number(record?.swap?.used ?? record?.swap);
   if (key === "disk") return Number(record?.disk?.used ?? record?.disk);
   if (key === "connections") {
     if (record?.connections && typeof record.connections === "object") return Number(record.connections.tcp || 0) + Number(record.connections.udp || 0);
@@ -64,8 +65,15 @@ function makeData(definition) {
   const points = source.map((record) => ({
     time: Date.parse(record.updated_at || record.time) / 1000,
     value: valueOf(record, definition.key),
+    extra: definition.extra ? valueOf(record, definition.extra.key) : NaN,
   })).filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value)).sort((a, b) => a.time - b.time);
-  return [points.map((point) => point.time), points.map((point) => point.value)];
+  const times = points.map((point) => point.time);
+  const series = [times, points.map((point) => point.value)];
+  // Swap 只有在出现非零样本时才追加第二条曲线，避免全 0 噪音。
+  if (definition.extra && points.some((point) => Number.isFinite(point.extra) && point.extra > 0)) {
+    series.push(points.map((point) => (Number.isFinite(point.extra) ? point.extra : null)));
+  }
+  return series;
 }
 
 function renderCharts() {
@@ -98,7 +106,11 @@ function renderCharts() {
         { stroke: axis, width: 2, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 }, size: 28, values: (_u, splits) => splits.map((value) => new Date(value * 1000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })) },
         { stroke: axis, width: 2, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 }, size: 64, values: (_u, splits) => splits.map((value) => formatAxis(value, definition.unit)) },
       ],
-      series: [{ label: "时间" }, { label: definition.label, stroke: definition.color, width: 2, points: { show: false }, spanGaps: false }],
+      series: [
+        { label: "时间" },
+        { label: definition.label, stroke: definition.color, width: 2, points: { show: false }, spanGaps: false },
+        ...(definition.extra ? [{ label: definition.extra.label, stroke: definition.extra.color, width: 1.5, points: { show: false }, spanGaps: true }] : []),
+      ],
       hooks: { setCursor: [(u) => {
         u.root.setAttribute("aria-label", `${definition.label} 历史数据`);
         const sampleIndex = u.cursor.idx;
@@ -132,7 +144,7 @@ function queueRender() {
 }
 
 function recordsSignature() {
-  return props.records.map((record) => `${record.updated_at || record.time}:${record.cpu?.usage ?? record.cpu}:${record.ram?.used ?? record.ram}:${record.disk?.used ?? record.disk}:${record.connections?.tcp ?? record.connections}`).join("|");
+  return props.records.map((record) => `${record.updated_at || record.time}:${record.cpu?.usage ?? record.cpu}:${record.ram?.used ?? record.ram}:${record.swap?.used ?? record.swap}:${record.disk?.used ?? record.disk}:${record.connections?.tcp ?? record.connections}`).join("|");
 }
 
 function setHost(element, index) {
