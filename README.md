@@ -32,7 +32,7 @@
 
 ### 上传主题包
 
-1. 前往 [Releases](https://github.com/ShumTin/komari-minecraft/releases/latest) 下载最新的 `komari-theme-minecraft-v*.zip`。
+1. 前往 [Releases](https://github.com/Yinwii/komari-minecraft/releases/latest) 下载最新的 `komari-theme-minecraft-v*.zip`。
 2. 进入 Komari 后台的主题管理页面。
 3. 上传 ZIP 并启用主题。
 
@@ -43,7 +43,7 @@
 也可以在 Komari 的“导入远程主题”中填写：
 
 ```text
-https://github.com/ShumTin/komari-minecraft
+https://github.com/Yinwii/komari-minecraft
 ```
 
 ## 主题配置
@@ -52,6 +52,8 @@ https://github.com/ShumTin/komari-minecraft
 
 | 分类 | 配置 | 说明 |
 | --- | --- | --- |
+| 品牌与站点 | 站点显示名称 | 覆盖左上角名称与浏览器标签标题；留空时使用后台站点名。 |
+| 品牌与站点 | 自定义 Favicon | 填写图片地址（如 `/favicon.png`），留空使用 `/favicon.ico`。 |
 | 服务器卡片 | 启用三网延迟 | 开启后分别显示电信、移动和联通；关闭后显示平均延迟与平均丢包率。 |
 | 服务器卡片 | 三网任务名称 | 留空时自动匹配运营商名称；填写后按完整任务名选择。 |
 | 首页总览 | 显示总览统计条 | 控制整个总览区域。 |

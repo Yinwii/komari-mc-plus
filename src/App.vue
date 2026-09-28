@@ -70,6 +70,14 @@ const faviconUrl = computed(() => {
   const custom = String(settings.value.favicon || "").trim();
   return custom || "/favicon.ico";
 });
+/** favicon 缺失时的内置兜底图标，避免左上角出现破图。 */
+const FALLBACK_ICON = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234f8ccb'/%3E%3Crect x='7' y='8' width='18' height='12' rx='2' fill='%23e8f1fa'/%3E%3Crect x='12' y='22' width='8' height='3' rx='1.5' fill='%23e8f1fa'/%3E%3C/svg%3E";
+function onFaviconError(event) {
+  const img = event.target;
+  if (img.dataset.fallback) return;
+  img.dataset.fallback = "1";
+  img.src = FALLBACK_ICON;
+}
 const siteName = computed(() => {
   const custom = String(settings.value.siteName || "").trim();
   return custom || publicSiteName.value || "Komari";
@@ -140,6 +148,7 @@ watch(nodes, () => {
   if (last && last.up === up && last.down === down) return;
   speedHistory.value = [...speedHistory.value, { up, down }].slice(-SPEED_HISTORY_MAX);
 });
+const isDemoMode = ref(false);
 const filteredNodes = ref(nodes.value);
 const errorMessage = ref("");
 let refreshTimer;
@@ -184,16 +193,17 @@ function closeDetails() {
   selectedNode.value = null;
 }
 
-/** 点击左上角品牌区：回到站点首页（详情页中则返回列表）。 */
+/** 点击左上角品牌区：打开当前页面——详情页返回列表，首页则重新加载。 */
 function goHome() {
   if (selectedNode.value) {
-    closeDetails();
+    window.location.assign("/");
     return;
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.location.reload();
 }
 
 function refreshData() {
+  if (isDemoMode.value) return Promise.resolve();
   if (refreshInFlight) return Promise.resolve();
   refreshInFlight = true;
   isLoading.value = true;
@@ -225,7 +235,7 @@ function refreshData() {
 }
 
 async function refreshRealtimeData() {
-  if (refreshStopped || realtimeInFlight || !nodes.value.length || !supportsBatchLatestStats()) return;
+  if (refreshStopped || realtimeInFlight || isDemoMode.value || !nodes.value.length || !supportsBatchLatestStats()) return;
   const transport = getRpcTransportState();
   if (transport !== "websocket" && Date.now() - lastHttpFallbackAt < 15000) return;
   realtimeInFlight = true;
@@ -247,6 +257,7 @@ async function refreshRealtimeData() {
 onMounted(() => {
   systemQuery.addEventListener("change", syncSystem);
   document.addEventListener("visibilitychange", refreshVisibleSettings);
+  if (window.location.hash.startsWith("#demo")) isDemoMode.value = true;
   syncRoute();
   window.addEventListener("popstate", syncRoute);
   refreshStopped = false;
@@ -348,7 +359,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
     <div v-if="wallpaper.enabled && wallpaper.url" class="wallpaper-overlay" aria-hidden="true" />
     <header class="header">
       <a class="site-brand" href="/" title="返回首页" @click.prevent="goHome">
-        <img class="site-icon" :src="faviconUrl" alt="" />
+        <img class="site-icon" :src="faviconUrl" alt="" @error="onFaviconError" />
         <h1>{{ siteName }}</h1>
       </a>
       <Toolbar
@@ -374,8 +385,8 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
     </section>
     <main v-else-if="!selectedNode" :aria-busy="isLoading">
       <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" />
-      <p v-if="settingsError" class="data-error" role="alert">{{ settingsError }}</p>
-      <p v-if="errorMessage" class="data-error" role="alert">{{ errorMessage }}</p>
+      <p v-if="settingsError && !isDemoMode" class="data-error" role="alert">{{ settingsError }}</p>
+      <p v-if="errorMessage && !isDemoMode" class="data-error" role="alert">{{ errorMessage }}</p>
       <div class="node-filters">
         <GroupFilter
           :groups="groups"
