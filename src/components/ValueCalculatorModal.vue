@@ -308,8 +308,8 @@ onBeforeUnmount(() => {
                   <input class="value-input" type="date" :min="expiryMin()" :value="view.row.expiry" @change="onDateChange(view.row, $event)" />
                 </label>
                 <label class="calc-field">
-                  <span>🛒 参考市价</span>
-                  <input class="value-input" type="number" min="0" step="0.01" placeholder="可选" :value="view.row.market || ''" @change="patchOverride(view.row.uuid, { market: Math.max(0, Number($event.target.value) || 0) })" />
+                  <span title="同配置机器当前的市场售价，用于估算溢价。不填则溢价显示为待计算">🛒 参考市价</span>
+                  <input class="value-input" type="number" min="0" step="0.01" placeholder="可选 · 用于算溢价" :value="view.row.market || ''" @change="patchOverride(view.row.uuid, { market: Math.max(0, Number($event.target.value) || 0) })" />
                 </label>
               </div>
 
@@ -340,9 +340,9 @@ onBeforeUnmount(() => {
 
               <div class="calc-result-grid">
                 <div>
-                  <span>🧾 溢价</span>
+                  <span title="溢价 = 参考市价 − 剩余价值，由系统自动计算，无需手动填写；想高于成本卖出多少即市价减残值">🧾 溢价（自动）</span>
                   <b :class="{ 'is-neg': (view.premiumCny ?? view.item.premium) > 0, 'is-pos': (view.premiumCny ?? view.item.premium) < 0 }">
-                    {{ view.item.premium === null ? "未填市价" : `¥${fmt(view.premiumCny ?? view.item.premium)}` }}
+                    {{ view.item.premium === null ? "填市价后算" : `¥${fmt(view.premiumCny ?? view.item.premium)}` }}
                   </b>
                 </div>
                 <div>
@@ -362,7 +362,7 @@ onBeforeUnmount(() => {
 
       <footer class="value-foot">
         <Check :size="14" aria-hidden="true" />
-        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；长期/买断不折旧；修改会自动记忆，并与总面板、详情页共用。
+        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；溢价 = 参考市价 − 剩余价值（填入市价后自动计算）；长期/买断不折旧；修改自动记忆并与总面板共用。
       </footer>
 
       <transition name="value-toast">

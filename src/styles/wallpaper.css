@@ -85,6 +85,20 @@
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
 }
 
+/* 深色 + 壁纸：面板必须用深色半透明玻璃，否则浅色玻璃上浅色文字不可读 */
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .value-panel {
+  background: rgba(24, 30, 42, 0.86);
+}
+
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .host-menu,
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .chart-tooltip {
+  background: rgba(23, 30, 43, 0.92);
+}
+
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .node-table th {
+  background: rgba(30, 39, 54, 0.6);
+}
+
 /* 深色主题的半透明表面 */
 .monitor-app.is-dark.has-wallpaper .header {
   background: rgba(23, 34, 49, 0.55);

@@ -156,6 +156,8 @@
   background: #ffffff;
   color: #3d4757;
   font-size: 13px;
+  white-space: nowrap;
+  flex: 0 0 auto;
   cursor: pointer;
 }
 
@@ -479,6 +481,21 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
 .monitor-app.is-dark .value-panel {
   background: #1b212d;
   color: #e5eaf2;
+}
+
+/* 标题显式提亮，避免继承链上被浅色玻璃背景规则干扰 */
+.monitor-app.is-dark .value-head h2 {
+  color: #eef2f8;
+}
+
+/* 深色下原生控件（日期选择器日历图标等）改用深色方案 */
+.monitor-app.is-dark input[type="date"].value-input {
+  color-scheme: dark;
+}
+
+.monitor-app.is-dark input[type="date"].value-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  opacity: 0.8;
 }
 
 .monitor-app.is-dark .value-head p,
