@@ -440,7 +440,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
       @select-host="openNode(nodes.find((node) => node.uuid === $event))"
       @open-calc="openCalcCard"
     />
-    <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" />
+    <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" @open-calc="openCalcCard" />
     <ValueCalculatorModal v-if="calcCardUuids.length" :nodes="nodes" :initial-uuids="calcCardUuids" @close="calcCardUuids = []" />
     <VisitorCard />
     <Transition name="toast-fade">

@@ -59,6 +59,23 @@
 }
 .calc-card-close:hover { color: #c25b3a; border-color: #f0c9b8; background: #fdf3ee; }
 
+/* 卡片内的实时配置信息行（跟随勾选栏显示） */
+.calc-card-config {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px dashed #dbe4ef;
+  border-radius: 8px;
+  background: #f8fafd;
+  color: #5a6b80;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calc-card-config.is-empty { color: #9aa6b5; font-style: italic; }
+
 .calc-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 
 /* 复制/图片附带配置的勾选栏 */
@@ -73,8 +90,7 @@
   border-radius: 10px;
   background: #f8fafc;
   font-size: 12px;
-  color: #64717d;
-}
+  color: #64717d;}
 .calc-config-label { font-weight: 600; }
 .calc-config-check {
   display: inline-flex;
@@ -90,6 +106,22 @@
   margin: 0;
   accent-color: #1f7a4d;
   cursor: pointer;
+}
+.calc-config-check.is-all {
+  padding-right: 10px;
+  border-right: 1px dashed #dbe4ef;
+}
+.calc-config-check.is-all b { font-weight: 600; }
+.calc-config-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 2px;
+  background: #e3eaf3;
+}
+/* 计算器内复用全局溢价模式切换 */
+.calc-config-bar .calc-mode-switch button {
+  padding: 2px 9px;
+  font-size: 11px;
 }
 
 .calc-form { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -257,10 +289,13 @@
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2390a0b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 .monitor-app.is-dark .calc-server:focus { border-color: #5a7ca8; box-shadow: 0 0 0 3px rgba(90, 130, 190, 0.2); }
+.monitor-app.is-dark .calc-card-config { border-color: #3a465c; background: #232c3b; color: #9fb2c9; }
+.monitor-app.is-dark .calc-card-config.is-empty { color: #6d7d94; }
 .monitor-app.is-dark .calc-field > span { color: #8d99ad; }
 .monitor-app.is-dark .calc-field-head > span:first-child { color: #8d99ad; }
 .monitor-app.is-dark .calc-config-bar { border-color: #334054; background: #1f2734; color: #8d99ad; }
 .monitor-app.is-dark .calc-config-check { color: #cfd8e6; }
+.monitor-app.is-dark .calc-config-divider { background: #334054; }
 .monitor-app.is-dark .calc-mode-switch { border-color: #3a465c; background: #232c3b; }
 .monitor-app.is-dark .calc-mode-switch button { color: #8d99ad; }
 .monitor-app.is-dark .calc-mode-switch button:hover { color: #cfd8e6; }

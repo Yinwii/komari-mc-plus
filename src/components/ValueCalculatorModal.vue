@@ -4,6 +4,7 @@ import { Check, Copy, ImageDown, Plus, X } from "lucide-vue-next";
 import { fetchExchangeRates, aliases } from "../services/assets.js";
 import { buildHtmlReport, buildTextReport, computeNodeValue, cnyRatio, summarizeValues } from "../utils/valueCalc.js";
 import { renderValueImage } from "../utils/valueImage.js";
+import { setPremiumMode, usePremiumMode } from "../utils/premiumMode.js";
 
 const props = defineProps({
   nodes: { type: Array, required: true },
@@ -67,6 +68,7 @@ function loadConfigFields() {
 
 const overrides = ref(loadOverrides());
 const configFields = ref(loadConfigFields());
+const premiumMode = usePremiumMode();
 const rates = ref(null);
 const now = ref(Date.now());
 const toastMessage = ref("");
@@ -87,13 +89,26 @@ function patchOverride(uuid, patch) {
   persistOverrides();
 }
 
-function toggleConfigField(key) {
-  configFields.value = { ...configFields.value, [key]: !configFields.value[key] };
+function persistConfigFields() {
   try {
     localStorage.setItem(CONFIG_FIELDS_KEY, JSON.stringify(configFields.value));
   } catch {
     // 存储不可用时仅保留本次会话。
   }
+}
+
+function toggleConfigField(key) {
+  configFields.value = { ...configFields.value, [key]: !configFields.value[key] };
+  persistConfigFields();
+}
+
+const allConfigSelected = computed(() => CONFIG_FIELDS.every((option) => configFields.value[option.key]));
+
+/** 「全部」勾选：全选中时点击取消全部，否则一键全选。 */
+function toggleAllConfigFields() {
+  const next = !allConfigSelected.value;
+  configFields.value = Object.fromEntries(CONFIG_FIELDS.map((option) => [option.key, next]));
+  persistConfigFields();
 }
 
 /** 按勾选拼接配置描述行（用于复制文本与图片）。 */
@@ -104,6 +119,13 @@ function buildConfigLine(row) {
   if (configFields.value.disk && row.diskTotalText) parts.push(`${row.diskTotalText} 硬盘`);
   if (configFields.value.traffic && row.trafficLimitText) parts.push(`${row.trafficLimitText}/月 流量`);
   return parts.join(" · ");
+}
+
+const anyConfigFieldChecked = computed(() => CONFIG_FIELDS.some((option) => configFields.value[option.key]));
+
+/** 节点是否带任何配置数据（CPU/内存/硬盘/流量任一）。 */
+function hasConfigData(row) {
+  return Boolean(row.cores || row.memoryTotalText || row.diskTotalText || row.trafficLimitText);
 }
 
 /** 可编辑行：节点数据 + 手动修正（币种、溢价模式也支持修正）。 */
@@ -121,8 +143,8 @@ const rowByUuid = computed(() => {
       expiry: String(o.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),
       // 市价/溢价保留原始字符串，避免输入负号、小数点等中间态被数字归一化清除。
       market: o.market === null || o.market === undefined || o.market === "" ? 0 : o.market,
-      // 溢价模式默认「直接填溢价」（总价 = 剩余价值 + 溢价）。
-      premiumMode: o.mode === "market" ? "market" : "premium",
+      // 溢价模式为全局开关（与总面板共用）。
+      premiumMode: premiumMode.value,
       manualPremium: o.premium === null || o.premium === undefined || o.premium === "" ? null : o.premium,
       currencyLocked: !o.currency && !(String(node.currency || "").trim()),
       // 服务器配置（复制/图片可选用）
@@ -213,11 +235,6 @@ function onCurrencyChange(row, event) {
 
 function onDateChange(row, event) {
   patchOverride(row.uuid, { expiry: event.target.value });
-}
-
-/** 切换溢价模式：premium = 直接填溢价（默认），market = 按参考市价倒算。 */
-function setPremiumMode(row, mode) {
-  patchOverride(row.uuid, { mode });
 }
 
 /** 溢价输入：保留原始字符（负号、小数点等中间态不归一化），计算时再转数字。 */
@@ -349,9 +366,33 @@ onBeforeUnmount(() => {
 
       <div class="calc-config-bar">
         <span class="calc-config-label">⚙️ 复制 / 图片附带服务器配置：</span>
+        <label class="calc-config-check is-all" :title="allConfigSelected ? '点击取消全部配置项' : '一键勾选全部配置项'">
+          <input
+            type="checkbox"
+            :checked="allConfigSelected"
+            :indeterminate.prop="!allConfigSelected && CONFIG_FIELDS.some((option) => configFields[option.key])"
+            @change="toggleAllConfigFields"
+          /><b>全部</b>
+        </label>
         <label v-for="option in CONFIG_FIELDS" :key="option.key" class="calc-config-check">
           <input type="checkbox" :checked="configFields[option.key]" @change="toggleConfigField(option.key)" />{{ option.label }}
         </label>
+        <span class="calc-config-divider" aria-hidden="true" />
+        <span class="calc-config-label">🧮 溢价模式：</span>
+        <span class="calc-mode-switch" role="group" aria-label="溢价计算方式（全局）">
+          <button
+            type="button"
+            :class="{ active: premiumMode === 'premium' }"
+            title="直接填写溢价：总价 = 剩余价值 + 溢价（默认）"
+            @click="setPremiumMode('premium')"
+          >填溢价</button>
+          <button
+            type="button"
+            :class="{ active: premiumMode === 'market' }"
+            title="填写参考市价，系统倒算溢价：溢价 = 市价 − 剩余价值"
+            @click="setPremiumMode('market')"
+          >按市价</button>
+        </span>
       </div>
 
       <div class="calc-grid" :class="{ 'is-multi': cardsView.length > 1 }">
@@ -361,6 +402,13 @@ onBeforeUnmount(() => {
               <option v-for="node in nodes" :key="node.uuid" :value="node.uuid">{{ node.name }}</option>
             </select>
             <button v-if="cardsView.length > 1" class="calc-card-close" aria-label="移除此卡片" @click="removeCard(view.card.id)"><X :size="14" /></button>
+          </div>
+
+          <div v-if="buildConfigLine(view.row)" class="calc-card-config" title="按上方勾选的配置项实时显示">
+            🖥 {{ buildConfigLine(view.row) }}
+          </div>
+          <div v-else-if="anyConfigFieldChecked && !hasConfigData(view.row)" class="calc-card-config is-empty">
+            🖥 该节点暂无配置数据
           </div>
 
           <div class="calc-body">
@@ -402,21 +450,7 @@ onBeforeUnmount(() => {
                 </label>
                 <div class="calc-field">
                   <span class="calc-field-head">
-                    <span>{{ view.row.premiumMode === "market" ? "🛒 参考市价" : "🧾 溢价" }}</span>
-                    <span class="calc-mode-switch" role="group" aria-label="溢价计算方式">
-                      <button
-                        type="button"
-                        :class="{ active: view.row.premiumMode === 'premium' }"
-                        title="直接填写溢价：总价 = 剩余价值 + 溢价（默认）"
-                        @click="setPremiumMode(view.row, 'premium')"
-                      >填溢价</button>
-                      <button
-                        type="button"
-                        :class="{ active: view.row.premiumMode === 'market' }"
-                        title="填写参考市价，系统倒算溢价：溢价 = 市价 − 剩余价值"
-                        @click="setPremiumMode(view.row, 'market')"
-                      >按市价</button>
-                    </span>
+                    <span>{{ premiumMode === "market" ? "🛒 参考市价" : "🧾 溢价" }}</span>
                   </span>
                   <input
                     v-if="view.row.premiumMode === 'premium'"
@@ -473,8 +507,8 @@ onBeforeUnmount(() => {
 
               <div class="calc-result-grid">
                 <div>
-                  <span :title="view.row.premiumMode === 'market' ? '溢价 = 参考市价 − 剩余价值' : '直接填写的溢价，正数=加价、负数=折价'">
-                    🧾 溢价（{{ view.row.premiumMode === "market" ? "市价 − 残值" : "直接填" }}）
+                  <span :title="premiumMode === 'market' ? '溢价 = 参考市价 − 剩余价值' : '直接填写的溢价，正数=加价、负数=折价'">
+                    🧾 溢价（{{ premiumMode === "market" ? "市价 − 残值" : "直接填" }}）
                   </span>
                   <b :class="{ 'is-neg': view.item.premium > 0, 'is-pos': view.item.premium < 0 }">
                     {{ premiumText(view) }}
@@ -498,7 +532,7 @@ onBeforeUnmount(() => {
 
       <footer class="value-foot">
         <Check :size="14" aria-hidden="true" />
-        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；总价 = 剩余价值 + 溢价；溢价默认「直接填」（正数加价、负数折价），也可切到「按市价」由 参考市价 − 剩余价值 倒算；长期/买断不折旧；修改自动记忆并与总面板共用。
+        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；总价 = 剩余价值 + 溢价；溢价默认「直接填」（正数加价、负数折价），可用上方「溢价模式」全局切换为按市价倒算；长期/买断不折旧；修改自动记忆并与总面板共用。
       </footer>
 
       <transition name="value-toast">

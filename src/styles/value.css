@@ -292,33 +292,54 @@
   color: #2f6bb0;
 }
 
-/* 溢价模式切换标签（桌面与手机均显示：溢价 ⇄ 市价） */
-.value-mode-chip {
-  align-self: flex-start;
-  padding: 0 6px;
-  border: 1px solid #dfe5ec;
-  border-radius: 7px;
-  background: #f2f6fa;
-  color: #5a6b80;
-  font: inherit;
-  font-size: 9.5px;
-  line-height: 1.7;
+/* 溢价模式全局切换（工具栏一处控制，所有行共用） */
+.value-mode-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.value-mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a8698;
   white-space: nowrap;
+}
+
+.value-mode-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid #e2e7ee;
+  border-radius: 9px;
+  background: #f5f8fb;
+}
+
+.value-mode-switch button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #7a8797;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.value-mode-chip:hover {
-  border-color: #a8c2dd;
+.value-mode-switch button:hover { color: #3d4757; }
+
+.value-mode-switch button.active {
   background: #ffffff;
-  color: #2c3844;
+  color: #b06f12;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(60, 80, 110, 0.14);
 }
 
-.value-mode-chip.is-market {
-  border-color: #cbe0d3;
-  background: #f1faf4;
-  color: #12855c;
-}
+/* 节点名可点击：打开可视化计算器 */
+.value-name.is-clickable { cursor: pointer; }
+.value-name.is-clickable:hover b { color: #2f6bb0; text-decoration: underline; text-underline-offset: 3px; }
 
 .value-tag {
   display: none;
@@ -667,23 +688,26 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
   color: #8fb8f0;
 }
 
-.monitor-app.is-dark .value-mode-chip {
+.monitor-app.is-dark .value-mode-label {
+  color: #8d99ad;
+}
+
+.monitor-app.is-dark .value-mode-switch {
   border-color: #3a465c;
   background: #232c3b;
-  color: #9aaabd;
 }
 
-.monitor-app.is-dark .value-mode-chip:hover {
-  border-color: #4f6a8f;
-  background: #29343f;
-  color: #dde6f2;
+.monitor-app.is-dark .value-mode-switch button { color: #8d99ad; }
+
+.monitor-app.is-dark .value-mode-switch button:hover { color: #cfd8e6; }
+
+.monitor-app.is-dark .value-mode-switch button.active {
+  background: #33291a;
+  color: #efb75e;
+  box-shadow: none;
 }
 
-.monitor-app.is-dark .value-mode-chip.is-market {
-  border-color: #2f5340;
-  background: #1d2b24;
-  color: #4ad07f;
-}
+.monitor-app.is-dark .value-name.is-clickable:hover b { color: #8fb8f0; }
 
 /* ---- 手机适配 ---- */
 

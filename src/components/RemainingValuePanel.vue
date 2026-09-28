@@ -11,9 +11,10 @@ import {
   summarizeValues,
 } from "../utils/valueCalc.js";
 import { renderValueImage } from "../utils/valueImage.js";
+import { setPremiumMode, usePremiumMode } from "../utils/premiumMode.js";
 
 const props = defineProps({ nodes: { type: Array, required: true } });
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close", "open-calc"]);
 
 const OVERRIDES_KEY = "komari-value-overrides-v1";
 
@@ -35,6 +36,7 @@ function persistOverrides() {
 }
 
 const overrides = ref(loadOverrides());
+const premiumMode = usePremiumMode();
 const selected = ref(new Set());
 const search = ref("");
 const rates = ref(null);
@@ -57,10 +59,10 @@ const rows = computed(() => props.nodes.map((node) => {
     price: Number(override.price ?? (node.price > 0 ? node.price : 0)) || 0,
     cycle: Number(override.cycle ?? (Number(node.billingCycle) || 0)),
     expiry: String(override.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),
-    market: Number(override.market ?? 0) || 0,
-    // 溢价模式默认「直接填溢价」：总价 = 剩余价值 + 溢价。
-    premiumMode: override.mode === "market" ? "market" : "premium",
-    manualPremium: override.premium === null || override.premium === undefined || override.premium === "" ? null : Number(override.premium),
+    market: override.market === null || override.market === undefined || override.market === "" ? 0 : override.market,
+    // 溢价模式为全局开关（工具栏切换），总价 = 剩余价值 + 溢价。
+    premiumMode: premiumMode.value,
+    manualPremium: override.premium === null || override.premium === undefined || override.premium === "" ? null : override.premium,
     hasApiInfo: Boolean(node.price > 0 || node.expiredAt),
   };
 }));
@@ -150,10 +152,9 @@ function updateRow(uuid, patch) {
   persistOverrides();
 }
 
-/** 切换该节点的溢价模式：premium = 直接填溢价（默认），market = 按参考市价倒算。 */
-function togglePremiumMode(uuid) {
-  const current = overrides.value[uuid]?.mode === "market" ? "market" : "premium";
-  updateRow(uuid, { mode: current === "market" ? "premium" : "market" });
+/** 点击节点名打开可视化计算器。 */
+function openCalc(uuid) {
+  emit("open-calc", uuid);
 }
 
 function onCycleChange(row, event) {
@@ -317,7 +318,7 @@ onBeforeUnmount(() => {
           <strong :class="{ 'is-neg': summary.total.cny?.premium > 0, 'is-pos': summary.total.cny?.premium < 0 }">
             {{ summary.total.cny ? `¥${summary.total.cny.premium.toFixed(2)}` : "—" }}
           </strong>
-          <span class="value-stat-sub">直接填 或 市价倒算</span>
+          <span class="value-stat-sub">{{ premiumMode === "market" ? "按参考市价倒算" : "直接填写" }}</span>
         </div>
       </section>
 
@@ -329,6 +330,23 @@ onBeforeUnmount(() => {
         <button class="value-btn" :class="{ 'is-active': allSelected }" @click="toggleAll">
           <Check :size="15" aria-hidden="true" />{{ allSelected ? "取消全选" : "全选" }}
         </button>
+        <span class="value-mode-wrap" role="group" aria-label="溢价计算方式（全局）">
+          <span class="value-mode-label">溢价模式</span>
+          <span class="value-mode-switch">
+            <button
+              type="button"
+              :class="{ active: premiumMode === 'premium' }"
+              title="直接填写溢价：总价 = 剩余价值 + 溢价（默认）"
+              @click="setPremiumMode('premium')"
+            >填溢价</button>
+            <button
+              type="button"
+              :class="{ active: premiumMode === 'market' }"
+              title="填写参考市价，系统倒算溢价：溢价 = 市价 − 剩余价值"
+              @click="setPremiumMode('market')"
+            >按市价</button>
+          </span>
+        </span>
         <span class="value-spacer" />
         <button class="value-btn" @click="copyText"><Copy :size="15" aria-hidden="true" />复制文本</button>
         <button class="value-btn" @click="copyRich"><Copy :size="15" aria-hidden="true" />复制富文本</button>
@@ -339,7 +357,7 @@ onBeforeUnmount(() => {
       <div class="value-table-wrap">
         <div class="value-row value-row-head" aria-hidden="true">
           <span />
-          <span>节点</span><span>单价</span><span>周期</span><span>到期日</span><span>溢价 / 市价</span><span>剩余</span><span>剩余价值</span><span>溢价</span><span>总价</span>
+          <span>节点</span><span>单价</span><span>周期</span><span>到期日</span><span>{{ premiumMode === "market" ? "参考市价" : "溢价" }}</span><span>剩余</span><span>剩余价值</span><span>溢价</span><span>总价</span>
         </div>
         <div v-if="visibleRows.length === 0" class="value-empty">没有匹配的节点</div>
         <div
@@ -351,7 +369,11 @@ onBeforeUnmount(() => {
           <label class="value-check">
             <input type="checkbox" :checked="selected.has(row.uuid)" @change="toggleRow(row.uuid)" />
           </label>
-          <span class="value-name" :title="row.name">
+          <span
+            class="value-name is-clickable"
+            :title="`${row.name}（点击打开剩余价值计算器）`"
+            @click="openCalc(row.uuid)"
+          >
             <b>{{ row.name }}</b>
             <small>{{ [row.group, row.hasApiInfo ? "" : "缺计费信息"].filter(Boolean).join(" · ") }}</small>
           </span>
@@ -371,31 +393,25 @@ onBeforeUnmount(() => {
             <input class="value-input" type="date" :value="row.expiry" @change="updateRow(row.uuid, { expiry: $event.target.value })" />
           </span>
           <span class="value-cell is-mode">
-            <button
-              type="button"
-              class="value-mode-chip"
-              :class="{ 'is-market': row.premiumMode === 'market' }"
-              :title="row.premiumMode === 'market' ? '当前：按参考市价倒算溢价（点击改为直接填溢价）' : '当前：直接填溢价，总价 = 剩余价值 + 溢价（点击改为按市价）'"
-              @click="togglePremiumMode(row.uuid)"
-            >{{ row.premiumMode === "market" ? "市价" : "溢价" }} ⇄</button>
             <input
               v-if="row.premiumMode === 'premium'"
               class="value-input"
-              type="number"
-              step="0.01"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
               placeholder="±0.00"
               :value="row.manualPremium ?? ''"
-              @change="updateRow(row.uuid, { premium: $event.target.value === '' ? null : Number($event.target.value) || 0 })"
+              @input="updateRow(row.uuid, { premium: $event.target.value.trim() === '' ? null : $event.target.value.trim() })"
             />
             <input
               v-else
               class="value-input"
-              type="number"
-              min="0"
-              step="0.01"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
               placeholder="可选"
               :value="row.market || ''"
-              @change="updateRow(row.uuid, { market: Math.max(0, Number($event.target.value) || 0) })"
+              @input="updateRow(row.uuid, { market: $event.target.value.trim() === '' ? 0 : $event.target.value.trim() })"
             />
           </span>
           <span class="value-cell is-result">
@@ -419,7 +435,7 @@ onBeforeUnmount(() => {
 
       <footer class="value-foot">
         <Camera :size="14" aria-hidden="true" />
-        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；总价 = 剩余价值 + 溢价；溢价默认「直接填」（点每行的 溢价/市价 标签切换），也可按参考市价倒算；长期/买断不折旧。
+        剩余价值 = 单价 × 剩余天数 ÷ 周期天数；总价 = 剩余价值 + 溢价；溢价默认「直接填」，可用上方「溢价模式」全局切换为按参考市价倒算；点击节点名可打开可视化计算器；长期/买断不折旧。
       </footer>
 
       <transition name="value-toast">
