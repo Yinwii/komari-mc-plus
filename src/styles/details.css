@@ -101,10 +101,27 @@
 .info-panel h2 { display: flex; align-items: center; gap: 7px; margin: 0 0 12px; color: #111c27; font-size: 14px; }
 .load-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .load-chips i { font-style: normal; font-size: 11.5px; padding: 2px 7px; border-radius: 7px; background: rgba(70, 120, 190, 0.1); color: #3c6ea8; font-variant-numeric: tabular-nums; }
-.info-items { position: relative; display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; }
-.info-items::after { content: ""; position: absolute; top: 50%; right: 0; left: 0; border-top: 1px solid #d3dde5; }
-.info-items > div { min-width: 0; padding: 0 0 10px; }
-.info-items > div:nth-child(n + 3) { position: relative; top: 4px; padding-top: 10px; }
+.info-items { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: start; }
+.info-items > div { min-width: 0; padding: 3px 0 13px; }
+/* 从第二行起加分隔线：网格行高随内容自适应，任何条目数都不会重叠 */
+.info-items > div:nth-child(n + 3) { padding-top: 13px; border-top: 1px solid #e2eaf1; }
+.info-items b.is-value { color: #12855c; }
+.info-items b.is-premium-high { color: #c25b3a; }
+.info-items b.is-premium-low { color: #12855c; }
+.details-value-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #3c6ea8;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.details-value-open:hover { color: #2f6bb0; text-decoration: underline; }
 .info-items span { display: inline-flex; align-items: center; gap: 5px; color: #64717d; font-size: 11px; }
 .info-items span .app-icon, .info-items b .app-icon { width: 13px; height: 13px; }
 .info-items b .system-brand-icon {
@@ -213,8 +230,12 @@
 .monitor-app.is-dark .info-panel h2,
 .monitor-app.is-dark .info-items b { color: #e3e8ef; }
 .monitor-app.is-dark .info-items > div { border-color: #3d444d; }
-.monitor-app.is-dark .info-items::after,
 .monitor-app.is-dark .latency-legend { border-color: #304255; }
+.monitor-app.is-dark .info-items b.is-value { color: #5eeaa8; }
+.monitor-app.is-dark .info-items b.is-premium-high { color: #f0a07c; }
+.monitor-app.is-dark .info-items b.is-premium-low { color: #5eeaa8; }
+.monitor-app.is-dark .details-value-open { color: #9fb6f5; }
+.monitor-app.is-dark .details-value-open:hover { color: #c0d0ff; }
 .monitor-app.is-dark .details-back { border-color: transparent; background: transparent; color: #9fb6f5; }
 .monitor-app.is-dark .details-back:hover,
 .monitor-app.is-dark .details-back:focus-visible { border-color: #3d444d; background: #252d37; }

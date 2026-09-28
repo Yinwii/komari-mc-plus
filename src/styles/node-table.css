@@ -141,6 +141,7 @@
 /* 视图切换按钮组 */
 .view-switch {
   display: inline-flex;
+  flex: 0 0 auto;
   gap: 3px;
   padding: 3px;
   border: 1px solid #e2e7ee;

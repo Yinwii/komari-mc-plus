@@ -348,6 +348,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
       :is-minecraft="isMinecraftTheme"
       @close="closeDetails"
       @select-host="openNode(nodes.find((node) => node.uuid === $event))"
+      @open-value="showValuePanel = true"
     />
     <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" />
   </div>

@@ -4,7 +4,7 @@ import AppIcon from "./AppIcon.vue";
 import SystemIcon from "./SystemIcon.vue";
 import { getNodeStatus, getNodeStatusLabel } from "../utils/nodeStatus.js";
 import { formatByteRate, formatCost, formatExpiry } from "../utils/format.js";
-import { cycleLabel } from "../utils/valueCalc.js";
+import { computeNodeValue, cycleLabel } from "../utils/valueCalc.js";
 import { fetchNodeHistory } from "../services/nodeHistory.js";
 import { fetchNodePingData } from "../services/komariApi.js";
 import LoadCharts from "./LoadCharts.vue";
@@ -16,7 +16,7 @@ const props = defineProps({
   isDark: { type: Boolean, default: false },
   isMinecraft: { type: Boolean, default: false },
 });
-const emit = defineEmits(["close", "select-host"]);
+const emit = defineEmits(["close", "select-host", "open-value"]);
 
 const chartMode = ref("load");
 const loadTimeRange = ref("realtime");
@@ -97,6 +97,34 @@ const billing = computed(() => {
     remaining: raw ? formatExpiry(raw) : null,
     cost: node.price > 0 ? `${node.currency}${Number(node.price).toFixed(2)}` : null,
     cycle: node.billingCycle ? cycleLabel(Number(node.billingCycle)) : null,
+  };
+});
+
+/** 单台节点的剩余价值计算：与总面板共用 valueCalc 口径，并读取同一份手动修正记录。 */
+const valueSummary = computed(() => {
+  const node = props.node;
+  let override = {};
+  try {
+    override = JSON.parse(localStorage.getItem("komari-value-overrides-v1") || "{}")[node.uuid] || {};
+  } catch {
+    override = {};
+  }
+  const currency = String(node.currency || "¥").trim() || "¥";
+  const price = Number(override.price ?? (node.price > 0 ? node.price : 0)) || 0;
+  const cycle = Number(override.cycle ?? (Number(node.billingCycle) || 0));
+  const expiry = String(override.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : ""));
+  const market = Number(override.market ?? 0) || 0;
+  const item = computeNodeValue(
+    { uuid: node.uuid, name: node.name, currency, price, billingCycle: cycle, expiredAt: expiry || null, market },
+    Date.now(),
+  );
+  const money = (value) => `${item.currency}${value.toFixed(2)}`;
+  const expiredPrefix = item.expired ? "已过期 · " : "";
+  return {
+    remaining: item.incomplete ? "缺计费信息" : item.permanent ? "长期 · 不折旧" : `${expiredPrefix}${money(item.remainingValue)}`,
+    daily: item.dailyCost === null ? "—" : `${money(item.dailyCost)} / 天`,
+    premium: item.premium === null ? "未填市价" : `${item.premium >= 0 ? "+" : "-"}${money(Math.abs(item.premium))}`,
+    premiumClass: item.premium === null ? "" : item.premium > 0 ? "is-premium-high" : item.premium < 0 ? "is-premium-low" : "",
   };
 });
 
@@ -212,7 +240,11 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
           <div><span><AppIcon name="activity" /> 剩余天数</span><b>{{ billing.remaining || "暂无数据" }}</b></div>
           <div><span><AppIcon name="wallet" /> 续费价格</span><b>{{ billing.cost ? `${billing.cost}${billing.cycle ? ` / ${billing.cycle}` : ""}` : "免费或未设置" }}</b></div>
           <div><span><AppIcon name="database" /> 计费周期</span><b>{{ billing.cycle || "暂无数据" }}</b></div>
+          <div><span><AppIcon name="wallet" /> 剩余价值</span><b class="is-value">{{ valueSummary.remaining }}</b></div>
+          <div><span><AppIcon name="activity" /> 日均成本</span><b>{{ valueSummary.daily }}</b></div>
+          <div><span><AppIcon name="wallet" /> 溢价（市价 − 残值）</span><b :class="valueSummary.premiumClass">{{ valueSummary.premium }}</b></div>
         </div>
+        <button class="details-value-open" type="button" @click="$emit('open-value')">打开剩余价值计算器（全部节点汇总）→</button>
       </section>
     </div>
     <section class="details-panel">
