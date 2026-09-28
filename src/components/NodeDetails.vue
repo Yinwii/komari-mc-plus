@@ -256,9 +256,11 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
           <div><span><AppIcon name="activity" /> 剩余天数</span><b>{{ billing.remaining || "暂无数据" }}</b></div>
           <div><span><AppIcon name="wallet" /> 续费价格</span><b>{{ billing.cost ? `${billing.cost}${billing.cycle ? ` / ${billing.cycle}` : ""}` : "免费或未设置" }}</b></div>
           <div><span><AppIcon name="database" /> 计费周期</span><b>{{ billing.cycle || "暂无数据" }}</b></div>
+        </div>
+        <div class="info-items is-value-row">
           <div><span><AppIcon name="wallet" /> 剩余价值</span><button class="details-value-link" type="button" :title="valueSummary.clickable ? '点击打开可视化计算器' : '完善单价与到期日后再计算'" :disabled="!valueSummary.clickable" @click="$emit('open-calc', node.uuid)">{{ valueSummary.remaining }}</button></div>
           <div><span><AppIcon name="activity" /> 日均成本</span><b>{{ valueSummary.daily }}</b></div>
-          <div><span><AppIcon name="wallet" /> 溢价（市价 − 残值）</span><b :class="valueSummary.premiumClass">{{ valueSummary.premium }}</b></div>
+          <div><span title="市价 − 残值"><AppIcon name="wallet" /> 溢价</span><b :class="valueSummary.premiumClass">{{ valueSummary.premium }}</b></div>
         </div>
       </section>
     </div>

@@ -108,6 +108,22 @@
 .info-items b.is-value { color: #12855c; }
 .info-items b.is-premium-high { color: #c25b3a; }
 .info-items b.is-premium-low { color: #12855c; }
+/* 剩余价值 / 日均成本 / 溢价：三列同行，压缩账单卡高度 */
+.info-items.is-value-row {
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 14px;
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid #e2eaf1;
+}
+.info-items.is-value-row > div { padding: 0; }
+.info-items.is-value-row > div + div {
+  padding-left: 14px;
+  border-left: 1px solid #e2eaf1;
+}
+.info-items.is-value-row span { display: block; white-space: nowrap; }
+.info-items.is-value-row b,
+.info-items.is-value-row .details-value-link { display: block; margin-top: 3px; font-size: 13px; }
 /* 剩余价值金额：点击打开可视化计算器弹窗 */
 .details-value-link {
   padding: 0;
@@ -229,6 +245,8 @@
 .monitor-app.is-dark .info-panel h2,
 .monitor-app.is-dark .info-items b { color: #e3e8ef; }
 .monitor-app.is-dark .info-items > div { border-color: #3d444d; }
+.monitor-app.is-dark .info-items.is-value-row { border-color: #3d444d; }
+.monitor-app.is-dark .info-items.is-value-row > div + div { border-color: #3d444d; }
 .monitor-app.is-dark .latency-legend { border-color: #304255; }
 .monitor-app.is-dark .info-items b.is-value { color: #5eeaa8; }
 .monitor-app.is-dark .info-items b.is-premium-high { color: #f0a07c; }
@@ -254,6 +272,9 @@
   .details-panel { padding: 20px 14px 24px; border-radius: 13px; }
   .chart-grid { grid-template-columns: 1fr; }
   .info-items b { font-size: 13px; }
+  /* 窄屏下价值行三列过挤，改为三行堆叠但仍保持标题在上值在下 */
+  .info-items.is-value-row { grid-template-columns: 1fr; }
+  .info-items.is-value-row > div + div { padding-left: 0; padding-top: 9px; border-left: 0; border-top: 1px solid #e2eaf1; }
   /* 触控目标放大 */
   .details-back, .host-menu-trigger { width: 38px; height: 38px; }
   /* 主机菜单改为从标题行右缘内收，避免超出屏幕 */
