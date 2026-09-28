@@ -7,6 +7,7 @@ const props = defineProps({
   settings: { type: Object, required: true },
   speedHistory: { type: Array, default: () => [] },
 });
+defineEmits(["open-calc"]);
 
 // 参考 komari-theme-ink：速率卡片底部绘制上行/下行迷你面积走势图。
 const SPARK_W = 100;
@@ -48,7 +49,10 @@ const sparkReady = computed(() => Boolean(downPaths.value && upPaths.value));
       <span class="overview-icon"><AppIcon name="server" :size="22" /></span>
     </div>
     <div v-if="settings.showAssets" class="overview-card">
-      <div class="overview-label">剩余价值</div>
+      <div class="overview-label">
+        剩余价值
+        <button class="overview-calc-btn" type="button" title="打开剩余价值计算器（多卡对比 / 手动修正）" @click="$emit('open-calc')">🧮 计算器</button>
+      </div>
       <div class="overview-value">{{ overview.assets.value }}</div>
       <p>{{ overview.assets.forecast }}</p>
       <span class="overview-icon"><AppIcon name="wallet" :size="22" /></span>

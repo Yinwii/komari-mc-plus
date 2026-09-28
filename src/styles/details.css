@@ -66,6 +66,9 @@
 }
 
 .details-hero {
+  /* 抬升层级：壁纸模式下各 section 均为 z-index:1，后面的信息面板会盖住 hero 里的主机切换下拉 */
+  position: relative;
+  z-index: 6;
   display: flex;
   align-items: center;
   min-height: 58px;

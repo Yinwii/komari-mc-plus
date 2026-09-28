@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Camera, Check, Copy, ImageDown, Search, Share2, X } from "lucide-vue-next";
+import { Camera, Calculator, Check, Copy, ImageDown, Search, Share2, X } from "lucide-vue-next";
 import { fetchExchangeRates, aliases } from "../services/assets.js";
 import {
   buildHtmlReport,
@@ -158,12 +158,7 @@ function openCalc(uuid) {
 }
 
 function onCycleChange(row, event) {
-  const value = event.target.value;
-  if (value === "__custom") {
-    updateRow(row.uuid, { cycle: STANDARD_CYCLES.has(row.cycle) && row.cycle !== 0 && row.cycle !== -1 ? row.cycle : 30 });
-  } else {
-    updateRow(row.uuid, { cycle: Number(value) });
-  }
+  updateRow(row.uuid, { cycle: Number(event.target.value) });
 }
 
 function money(item, key) {
@@ -348,6 +343,7 @@ onBeforeUnmount(() => {
           </span>
         </span>
         <span class="value-spacer" />
+        <button class="value-btn" title="打开剩余价值计算器（可多卡对比）" @click="openCalc(selected.size === 1 ? [...selected][0] : rows[0]?.uuid)"><Calculator :size="15" aria-hidden="true" />计算器</button>
         <button class="value-btn" @click="copyText"><Copy :size="15" aria-hidden="true" />复制文本</button>
         <button class="value-btn" @click="copyRich"><Copy :size="15" aria-hidden="true" />复制富文本</button>
         <button class="value-btn" :disabled="busy === 'image'" @click="exportImage"><ImageDown :size="15" aria-hidden="true" />导出图片</button>
@@ -383,9 +379,9 @@ onBeforeUnmount(() => {
           </span>
           <span class="value-cell">
             <i class="value-tag">周期</i>
-            <select class="value-input" :value="STANDARD_CYCLES.has(row.cycle) ? row.cycle : '__custom'" @change="onCycleChange(row, $event)">
+            <select class="value-input" :value="row.cycle" @change="onCycleChange(row, $event)">
               <option v-for="option in cycleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-              <option value="__custom">自定义…</option>
+              <option v-if="!STANDARD_CYCLES.has(row.cycle)" :value="row.cycle">自定义 · {{ row.cycle }}天</option>
             </select>
           </span>
           <span class="value-cell">

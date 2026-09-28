@@ -95,6 +95,14 @@ test("长期节点和未设置费用不应显示失真的天数或演示价格",
   assert.equal(formatCost({ price: 0 }), "免费");
   assert.equal(formatCost({}), "免费");
   assert.equal(formatCost({ price: 5, currency: "$", billingCycle: 30 }), "$5.00/月");
+  // Komari 官方按天区间识别周期，非整 30/365 天不应误标为「年」。
+  assert.equal(formatCost({ price: 6.81, currency: "€", billingCycle: 31 }), "€6.81/月");
+  assert.equal(formatCost({ price: 6.81, currency: "€", billingCycle: 28 }), "€6.81/月");
+  assert.equal(formatCost({ price: 11, currency: "$", billingCycle: 365 }), "$11.00/年");
+  assert.equal(formatCost({ price: 11, currency: "$", billingCycle: 92 }), "$11.00/季");
+  assert.equal(formatCost({ price: 11, currency: "$", billingCycle: 180 }), "$11.00/半年");
+  assert.equal(formatCost({ price: 11, currency: "$", billingCycle: -1 }), "$11.00/买断");
+  assert.equal(formatCost({ price: 11, currency: "$", billingCycle: 45 }), "$11.00/45天");
 });
 
 test("汇率失败明确报错，成功结果缓存避免每次节点刷新重复请求", async (t) => {

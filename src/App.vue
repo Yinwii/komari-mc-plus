@@ -97,7 +97,8 @@ watch([siteName, faviconUrl], ([name, icon]) => {
 const showValuePanel = ref(false);
 const calcCardUuids = ref([]);
 function openCalcCard(uuid) {
-  calcCardUuids.value = [uuid];
+  const target = uuid || nodes.value[0]?.uuid;
+  if (target) calcCardUuids.value = [target];
 }
 const wallpaper = ref(loadWallpaperState());
 const wallpaperSwitching = ref(false);
@@ -321,8 +322,20 @@ function selectGroup(group) {
 
 function getGroupsFromNodes(items) {
   const counts = new Map();
-  items.forEach((node) => counts.set(node.group, (counts.get(node.group) || 0) + 1));
-  return [...counts].map(([code, count]) => ({ code, count }));
+  const regions = new Map();
+  items.forEach((node) => {
+    counts.set(node.group, (counts.get(node.group) || 0) + 1);
+    // 分组旗标：组内所有节点的 GeoIP region 一致时采用；商家名分组跨多国时不显示，避免误导。
+    if (node.region) {
+      const set = regions.get(node.group) || new Set();
+      set.add(node.region);
+      regions.set(node.group, set);
+    }
+  });
+  return [...counts].map(([code, count]) => {
+    const set = regions.get(code);
+    return { code, count, region: set && set.size === 1 ? [...set][0] : "" };
+  });
 }
 
 /** 无后端时的演示数据：访问 #demo / #demo-value 使用，便于预览与联调。 */
@@ -448,7 +461,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
       <p>加载节点...</p>
     </section>
     <main v-else-if="!selectedNode" :aria-busy="isLoading">
-      <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" />
+      <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" @open-calc="openCalcCard" />
       <p v-if="settingsError && !isDemoMode" class="data-error" role="alert">{{ settingsError }}</p>
       <p v-if="errorMessage && !isDemoMode" class="data-error" role="alert">{{ errorMessage }}</p>
       <div class="node-filters">

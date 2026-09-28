@@ -99,6 +99,16 @@
   background: rgba(30, 39, 54, 0.6);
 }
 
+/* 深色 + 壁纸：表格主体必须换成深色玻璃，否则白色玻璃上浅色文字不可读 */
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .node-table-wrap,
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .node-table {
+  background-color: rgba(23, 34, 49, 0.6);
+}
+
+.monitor-app.is-dark.has-wallpaper:not(.mc-theme) .node-table tbody tr:hover {
+  background: rgba(35, 44, 59, 0.75);
+}
+
 /* 深色主题的半透明表面 */
 .monitor-app.is-dark.has-wallpaper .header {
   background: rgba(23, 34, 49, 0.55);

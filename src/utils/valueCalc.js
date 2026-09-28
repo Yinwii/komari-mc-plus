@@ -12,6 +12,8 @@
  *   - 未显式指定模式时自动推断：填了溢价按 premium，填了市价按 market，否则 premium。
  */
 
+import { billingCycleUnit } from "./format.js";
+
 export const CYCLE_OPTIONS = [
   { value: 30, label: "月付 · 30天" },
   { value: 90, label: "季付 · 90天" },
@@ -36,8 +38,11 @@ export function parseExpiry(value) {
 }
 
 export function cycleLabel(days) {
-  const option = CYCLE_OPTIONS.find((item) => item.value === days);
-  return option ? option.label : days > 0 ? `自定义 · ${days}天` : "长期 / 买断";
+  const d = Math.trunc(Number(days));
+  if (d === -1 || d <= 0) return "长期 / 买断";
+  // 与 format.js 的 billingCycleUnit 共用同一套 Komari 官方区间，避免非整 30/365 天被误标。
+  const unit = billingCycleUnit(d);
+  return unit.endsWith("天") ? `自定义 · ${d}天` : `${unit}付 · ${d}天`;
 }
 
 /** 本地时区 YYYY-MM-DD（避免 toISOString 的 UTC 偏移导致跨日误差）。 */

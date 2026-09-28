@@ -19,11 +19,27 @@ export function formatExpiry(value, now = Date.now()) {
   return days > 0 ? `${days} 天` : "已到期";
 }
 
+/**
+ * 计费周期短标签。Komari 官方按天区间识别周期（utils/renewal.go）：
+ * 27-32 月付 / 87-95 季付 / 175-185 半年付 / 360-370 年付 / 720-750 两年付 / 1080-1150 三年付 / 1800-1850 五年付 / -1 长期。
+ */
+export function billingCycleUnit(days) {
+  const d = Math.trunc(Number(days));
+  if (d === -1) return "买断";
+  if (d >= 27 && d <= 32) return "月";
+  if (d >= 87 && d <= 95) return "季";
+  if (d >= 175 && d <= 185) return "半年";
+  if (d >= 360 && d <= 370) return "年";
+  if (d >= 720 && d <= 750) return "两年";
+  if (d >= 1080 && d <= 1150) return "三年";
+  if (d >= 1800 && d <= 1850) return "五年";
+  return d > 0 ? `${d}天` : "次";
+}
+
 export function formatCost(node) {
   const price = Number(node.price);
   if (!Number.isFinite(price) || price <= 0) return "免费";
-  const cycle = Number(node.billingCycle) === 30 ? "月" : "年";
-  return `${node.currency || "$"}${price.toFixed(2)}/${cycle}`;
+  return `${node.currency || "$"}${price.toFixed(2)}/${billingCycleUnit(node.billingCycle)}`;
 }
 
 function toBytes(value, unit) {
