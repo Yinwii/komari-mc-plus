@@ -161,61 +161,106 @@ export function summarizeValues(items, rates, now = Date.now()) {
   };
 }
 
-/** 生成简洁的纯文本报告（复制/分享用）。 */
+function cycleShort(days) {
+  const map = { 30: "月付", 90: "季付", 180: "半年付", 365: "年付", 730: "两年付" };
+  if (days === -1) return "长期";
+  return map[days] || (days > 0 ? `${days}天周期` : "未知周期");
+}
+
+/** 每台节点的 jsq 风格行数据（含 CNY 折算；rates 缺失时回退原币种）。 */
+function buildValueLines(item, rates) {
+  const ratio = rates ? cnyRatio(item.currency, rates) : null;
+  const convertible = ratio !== null;
+  const cny = (value) => (convertible ? value * ratio : null);
+  const priceCny = cny(item.price);
+  const valueCny = item.remainingValue === null ? null : cny(item.remainingValue);
+  const premiumCny = item.premium === null ? null : cny(item.premium);
+  const isCny = item.currency === "¥";
+
+  const priceLine = item.price > 0
+    ? isCny || !convertible
+      ? `${item.price.toFixed(2)} ${isCny ? "元" : item.currency}/${cycleShort(item.cycleDays)}`
+      : `${item.price.toFixed(2)} ${item.currency}/${cycleShort(item.cycleDays)}（约 ${priceCny.toFixed(2)} 元）`
+    : `免费或未设置`;
+  const remainingLine = item.permanent
+    ? "长期有效"
+    : item.remainingDays === null
+      ? "未知（缺少到期日或周期）"
+      : item.expired
+        ? `0天（已于 ${item.expiryMs ? formatDate(item.expiryMs) : "?"} 到期）`
+        : `${item.remainingDays}天（${item.expiryMs ? formatDate(item.expiryMs) : "?"} 到期）`;
+  const unit = convertible || isCny ? "元" : ` ${item.currency}`;
+  const valueLine = item.remainingValue === null
+    ? "未知"
+    : convertible && !isCny
+      ? `${valueCny.toFixed(2)}元（约 ${item.remainingValue.toFixed(2)} ${item.currency}）`
+      : `${(convertible ? valueCny : item.remainingValue).toFixed(2)}${unit}`;
+  const premiumLine = item.premium === null
+    ? `— / ${valueCny === null ? valueLine : `${(convertible ? valueCny : item.remainingValue).toFixed(2)}${unit}`}`
+    : `（市价 ${item.market.toFixed(2)} ${item.currency}）${(convertible ? premiumCny : item.premium).toFixed(2)}${unit} / ${(convertible ? valueCny : item.remainingValue).toFixed(2)}${unit}`;
+  return { priceLine, remainingLine, valueLine, premiumLine };
+}
+
+/** 生成 jsq.xiaoge.org 风格的 emoji 清单报告。 */
 export function buildTextReport(items, summary, meta = {}) {
   const lines = [];
-  const title = meta.title || "VPS 剩余价值评估";
-  lines.push(title);
-  if (meta.dateText) lines.push(`生成时间：${meta.dateText}`);
-  lines.push("");
-  lines.push("节点          币种  单价      到期        剩余天数  剩余价值   溢价");
-  lines.push("-".repeat(72));
+  lines.push(`## 🐔 VPS 剩余价值`);
+  lines.push(`- 📅 交易日期：${meta.dateText ? meta.dateText.slice(0, 10) : formatDate(Date.now())}`);
+  for (const rateLine of meta.rateLines || []) lines.push(`- 💹 外币汇率：${rateLine}`);
+  if (!meta.rateLines?.length) lines.push("- 💹 外币汇率：未获取（按原币种显示）");
   for (const item of items) {
-    const name = item.name.length > 12 ? `${item.name.slice(0, 11)}…` : item.name;
-    const expiry = item.expiryMs ? formatDate(item.expiryMs) : item.permanent ? "长期" : "未知";
-    const remaining = item.permanent ? "∞" : item.remainingDays === null ? "-" : `${item.remainingDays}`;
-    const value = item.remainingValue === null ? "-" : item.remainingValue.toFixed(2);
-    const premium = item.premium === null ? "-" : `${item.premium >= 0 ? "+" : ""}${item.premium.toFixed(2)}`;
-    lines.push(`${name.padEnd(14)}${item.currency.padEnd(4)}${item.price.toFixed(2).padEnd(10)}${expiry.padEnd(12)}${remaining.padEnd(10)}${value.padEnd(11)}${premium}`);
+    const value = buildValueLines(item, meta.rates);
+    lines.push("");
+    lines.push(`### 🖥 ${item.name}`);
+    lines.push(`- 💰 续费价格：${value.priceLine}`);
+    lines.push(`- ⏳ 剩余天数：${value.remainingLine}`);
+    lines.push(`- 💎 剩余价值：${value.valueLine}`);
+    lines.push(`- 🧾 溢价 / 总价：${value.premiumLine}`);
   }
-  lines.push("-".repeat(72));
+  lines.push("");
   if (summary.total.cny) {
-    lines.push(`合计（CNY 折算）：购入 ${summary.total.cny.price.toFixed(2)} · 剩余价值 ${summary.total.cny.value.toFixed(2)} · 溢价 ${summary.total.cny.premium.toFixed(2)}`);
+    lines.push(`> 💰 合计剩余价值：${summary.total.cny.value.toFixed(2)} 元（${summary.validCount} 台）${summary.total.cny.premium ? ` · 溢价 ${summary.total.cny.premium.toFixed(2)} 元` : ""}`);
+  } else {
+    const parts = [...summary.total.byCurrency.entries()].map(([currency, bucket]) => `${bucket.value.toFixed(2)} ${currency}`);
+    lines.push(`> 💰 合计剩余价值：${parts.join(" + ") || "—"}（${summary.validCount} 台）`);
   }
-  for (const [currency, bucket] of summary.total.byCurrency) {
-    if (summary.total.cny && currency === "¥") continue;
-    lines.push(`合计（${currency}）：购入 ${bucket.price.toFixed(2)} · 剩余价值 ${bucket.value.toFixed(2)}${bucket.premium ? ` · 溢价 ${bucket.premium.toFixed(2)}` : ""}`);
-  }
-  lines.push(`节点 ${summary.count} 台（信息完整 ${summary.validCount}）`);
-  if (meta.footer) lines.push(meta.footer);
+  if (meta.footer) lines.push(`> ${meta.footer}`);
   return lines.join("\n");
 }
 
-/** 生成带格式的 HTML 表格（富文本复制用）。 */
+/** 生成带格式的 HTML 报告（富文本复制用），样式与文本版一致。 */
 export function buildHtmlReport(items, summary, meta = {}) {
   const esc = (text) => String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const rows = items.map((item) => {
-    const expiry = item.expiryMs ? formatDate(item.expiryMs) : item.permanent ? "长期" : "未知";
-    const remaining = item.permanent ? "长期" : item.remainingDays === null ? "—" : `${item.remainingDays} 天`;
-    const value = item.remainingValue === null ? "—" : item.remainingValue.toFixed(2);
-    const premium = item.premium === null ? "—" : `${item.premium >= 0 ? "+" : ""}${item.premium.toFixed(2)}`;
-    return `<tr><td>${esc(item.name)}</td><td style="text-align:center">${esc(expiry)}</td><td style="text-align:right">${esc(item.currency)}${item.price.toFixed(2)}</td><td style="text-align:center">${esc(remaining)}</td><td style="text-align:right">${esc(value)}</td><td style="text-align:right">${esc(premium)}</td></tr>`;
+  const blocks = items.map((item) => {
+    const value = buildValueLines(item, meta.rates);
+    return [
+      `<div style="margin:0 0 12px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">`,
+      `<div style="font-weight:600;margin-bottom:6px">🖥 ${esc(item.name)}${item.group ? ` <span style="color:#94a3b8;font-weight:400;font-size:12px">${esc(item.group)}</span>` : ""}</div>`,
+      `<div style="font-size:13px;line-height:1.9">`,
+      `💰 续费价格：${esc(value.priceLine)}<br/>`,
+      `⏳ 剩余天数：${esc(value.remainingLine)}<br/>`,
+      `💎 剩余价值：<b style="color:#12855c">${esc(value.valueLine)}</b><br/>`,
+      `🧾 溢价 / 总价：${esc(value.premiumLine)}`,
+      `</div></div>`,
+    ].join("");
   }).join("");
-  const totals = [];
-  if (summary.total.cny) totals.push(`合计（CNY 折算）：<b>${summary.total.cny.value.toFixed(2)}</b>（购入 ${summary.total.cny.price.toFixed(2)}，溢价 ${summary.total.cny.premium.toFixed(2)}）`);
-  for (const [currency, bucket] of summary.total.byCurrency) {
-    if (summary.total.cny && currency === "¥") continue;
-    totals.push(`合计（${esc(currency)}）：<b>${bucket.value.toFixed(2)}</b>（购入 ${bucket.price.toFixed(2)}）`);
+  const rateLines = meta.rateLines?.length
+    ? meta.rateLines.map((line) => esc(line)).join("；")
+    : "未获取（按原币种显示）";
+  let totalLine;
+  if (summary.total.cny) {
+    totalLine = `合计剩余价值：<b style="color:#12855c">${summary.total.cny.value.toFixed(2)} 元</b>（${summary.validCount} 台）${summary.total.cny.premium ? ` · 溢价 ${summary.total.cny.premium.toFixed(2)} 元` : ""}`;
+  } else {
+    const parts = [...summary.total.byCurrency.entries()].map(([currency, bucket]) => `${bucket.value.toFixed(2)} ${esc(currency)}`);
+    totalLine = `合计剩余价值：<b>${parts.join(" + ") || "—"}</b>（${summary.validCount} 台）`;
   }
   return [
-    `<div style="font-family:system-ui,sans-serif;max-width:640px">`,
-    `<h3 style="margin:0 0 4px">${esc(meta.title || "VPS 剩余价值评估")}</h3>`,
-    meta.dateText ? `<p style="margin:0 0 10px;color:#64748b;font-size:12px">${esc(meta.dateText)}</p>` : "",
-    `<table style="border-collapse:collapse;width:100%;font-size:13px">`,
-    `<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:6px 10px;border:1px solid #e2e8f0">节点</th><th style="padding:6px 10px;border:1px solid #e2e8f0">到期</th><th style="padding:6px 10px;border:1px solid #e2e8f0">单价</th><th style="padding:6px 10px;border:1px solid #e2e8f0">剩余</th><th style="padding:6px 10px;border:1px solid #e2e8f0">剩余价值</th><th style="padding:6px 10px;border:1px solid #e2e8f0">溢价</th></tr></thead>`,
-    `<tbody>${rows}</tbody>`,
-    `</table>`,
-    `<p style="margin:10px 0 0;font-size:13px">${totals.join("<br/>")}</p>`,
+    `<div style="font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;max-width:560px">`,
+    `<h2 style="margin:0 0 8px">🐔 VPS 剩余价值</h2>`,
+    `<p style="margin:0 0 4px;font-size:13px;color:#475569">📅 交易日期：${esc(meta.dateText ? meta.dateText.slice(0, 10) : formatDate(Date.now()))}</p>`,
+    `<p style="margin:0 0 12px;font-size:13px;color:#475569">💹 外币汇率：${rateLines}</p>`,
+    blocks,
+    `<div style="padding:10px 14px;border-radius:12px;background:#eafbf1;border:1px solid #bfe8cf;font-size:13px">${totalLine}</div>`,
     `<p style="margin:8px 0 0;color:#94a3b8;font-size:11px">${esc(meta.footer || "由 Komari 面板生成")}</p>`,
     `</div>`,
   ].join("");

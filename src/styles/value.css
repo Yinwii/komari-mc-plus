@@ -309,19 +309,69 @@
 .value-input {
   width: 100%;
   min-width: 0;
-  height: 30px;
-  padding: 0 7px;
-  border: 1px solid #e2e7ee;
-  border-radius: 8px;
-  background: #ffffff;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid #dfe5ec;
+  border-radius: 10px;
+  background: #f8fafc;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
   font: inherit;
   font-size: 12.5px;
   color: #1f2733;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.value-input:hover {
+  border-color: #c3cfdd;
+  background: #ffffff;
 }
 
 .value-input:focus {
   outline: none;
-  border-color: #9bb4e8;
+  border-color: #4f8fdd;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 143, 221, 0.16);
+}
+
+/* 下拉框：自绘箭头，去原生外观 */
+select.value-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 26px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b97a8' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 10px 6px;
+}
+
+input[type="number"].value-input {
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type="number"].value-input::-webkit-outer-spin-button,
+input[type="number"].value-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="date"].value-input {
+  cursor: pointer;
+}
+
+input[type="date"].value-input::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+.value-input::placeholder {
+  color: #a8b3c4;
 }
 
 .value-empty {
@@ -402,6 +452,26 @@
   background: #232c3b;
   border-color: #334054;
   color: #e5eaf2;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.monitor-app.is-dark .value-input:hover {
+  border-color: #45566f;
+  background: #273141;
+}
+
+.monitor-app.is-dark .value-input:focus {
+  border-color: #5b9ce6;
+  background: #273141;
+  box-shadow: 0 0 0 3px rgba(91, 156, 230, 0.22);
+}
+
+.monitor-app.is-dark select.value-input {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a8b8d0' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.monitor-app.is-dark .value-input::placeholder {
+  color: #66748c;
 }
 
 .monitor-app.is-dark .value-search {

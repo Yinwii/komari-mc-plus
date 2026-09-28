@@ -50,6 +50,7 @@ export async function updateNodeRealtime(node, records) {
   const diskTotal = Number(stats.disk?.total) || 0;
   const tcpConnections = optionalNumber(stats.connections?.tcp);
   const udpConnections = optionalNumber(stats.connections?.udp);
+  const load = extractLoad(stats);
   return {
     ...node,
     latestStats: stats,
@@ -58,6 +59,9 @@ export async function updateNodeRealtime(node, records) {
     memoryText: `${formatBytes(memoryUsed)} / ${formatBytes(memoryTotal)}`,
     disk: fixed(diskTotal ? (diskUsed / diskTotal) * 100 : 0),
     diskText: `${formatBytes(diskUsed)} / ${formatBytes(diskTotal)}`,
+    load1: load.load1,
+    load5: load.load5,
+    load15: load.load15,
     up: String(stats.network?.up || 0),
     down: String(stats.network?.down || 0),
     out: formatBytes(Number(stats.network?.totalUp) || 0),
@@ -195,8 +199,19 @@ export async function fetchNodePingData(uuid, hours = 1, signal) {
   );
 }
 
-function toNodeModel(node, records, pingLines = []) {
+/** 兼容两种采样格式：新版 `load:{load1,load5,load15}` 与旧版扁平 `load/load5/load15`。 */
+function extractLoad(stats) {
+  if (!stats) return { load1: null, load5: null, load15: null };
+  const load = stats.load;
+  if (load && typeof load === "object") {
+    return { load1: optionalNumber(load.load1), load5: optionalNumber(load.load5), load15: optionalNumber(load.load15) };
+  }
+  return { load1: optionalNumber(load), load5: optionalNumber(stats.load5), load15: optionalNumber(stats.load15) };
+}
+
+export function toNodeModel(node, records, pingLines = []) {
   const stats = records[records.length - 1];
+  const load = extractLoad(stats);
   const peakUpRecord = getPeakNetworkRecord(records, "up");
   const peakDownRecord = getPeakNetworkRecord(records, "down");
   const memoryTotal = Number(node.mem_total) || Number(stats?.ram?.total) || 0;
@@ -209,6 +224,7 @@ function toNodeModel(node, records, pingLines = []) {
 
   return {
     name: node.name || node.uuid,
+    region: String(node.region || "").trim(),
     group: node.group || node.region || "UN",
     os: node.os || "Unknown",
     cpu: fixed(stats?.cpu?.usage),
@@ -248,6 +264,9 @@ function toNodeModel(node, records, pingLines = []) {
     online: online ? formatUptime(stats.uptime) : "离线",
     expiredAt: node.expired_at || null,
     expires: formatExpiry(node.expired_at),
+    load1: load.load1,
+    load5: load.load5,
+    load15: load.load15,
     status: online ? "online" : "offline",
     uuid: node.uuid,
     latestStats: stats || null,

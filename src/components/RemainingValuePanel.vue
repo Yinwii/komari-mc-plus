@@ -101,11 +101,23 @@ const totalDailyCost = computed(() => {
 
 const allSelected = computed(() => rows.value.length > 0 && selected.value.size === rows.value.length);
 
-const meta = computed(() => ({
-  title: "VPS 剩余价值评估",
-  dateText: new Date(now.value).toLocaleString("zh-CN", { hour12: false }),
-  footer: "由 Komari 面板生成",
-}));
+const meta = computed(() => {
+  const rateLines = [];
+  if (ratesForCalc.value) {
+    const currencies = [...new Set(selectedResults.value.map((item) => item.currency))]
+      .filter((currency) => currency !== "¥" && cnyRatio(currency, ratesForCalc.value) !== null);
+    for (const currency of currencies) {
+      rateLines.push(`1 ${currency} ≈ ${(1 / cnyRatio(currency, ratesForCalc.value)).toFixed(4)} CNY`);
+    }
+  }
+  return {
+    title: "VPS 剩余价值评估",
+    dateText: new Date(now.value).toLocaleString("zh-CN", { hour12: false }),
+    footer: "由 Komari 面板生成",
+    rates: ratesForCalc.value,
+    rateLines,
+  };
+});
 
 const reportItems = computed(() => selectedResults.value);
 

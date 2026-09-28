@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import SystemIcon from "./SystemIcon.vue";
 import { getNodeStatus, getNodeStatusLabel } from "../utils/nodeStatus.js";
-import { formatByteRate } from "../utils/format.js";
+import { formatByteRate, formatCost, formatExpiry } from "../utils/format.js";
+import { cycleLabel } from "../utils/valueCalc.js";
 import { fetchNodeHistory } from "../services/nodeHistory.js";
 import { fetchNodePingData } from "../services/komariApi.js";
 import LoadCharts from "./LoadCharts.vue";
@@ -61,11 +62,43 @@ function formatClock(value) {
   });
 }
 
-function formatConnectionProcess(node) {
-  const connections = Number.isFinite(node.connectionCount) ? node.connectionCount : "暂无数据";
-  const processes = Number.isFinite(node.processCount) ? node.processCount : "暂无数据";
-  return `${connections} / ${processes}`;
+function formatBytes(value) {
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  return `${(value / 1024 ** index).toFixed(index > 1 ? 2 : 0)} ${units[index]}`;
 }
+
+const trafficUsage = computed(() => {
+  const node = props.node;
+  const used = (node.trafficUpBytes || 0) + (node.trafficDownBytes || 0);
+  const limit = node.trafficLimitBytes || 0;
+  if (!used && !limit) return null;
+  return {
+    text: `${formatBytes(used)} / ${limit ? formatBytes(limit) : "不限"}`,
+    percent: limit && used ? `（${Math.min(999, (used / limit) * 100).toFixed(1)}%）` : "",
+  };
+});
+
+const loadInfo = computed(() => {
+  const entries = [["1m", props.node.load1], ["5m", props.node.load5], ["15m", props.node.load15]];
+  if (!entries.some(([, value]) => Number.isFinite(value))) return null;
+  return entries.map(([label, value]) => ({ label, value: Number.isFinite(value) ? value.toFixed(2) : "--" }));
+});
+
+const billing = computed(() => {
+  const node = props.node;
+  const raw = node.expiredAt;
+  const expiryDate = raw && Number.isFinite(Date.parse(raw)) && Math.ceil((Date.parse(raw) - Date.now()) / 86400000) <= 36500
+    ? new Date(raw).toLocaleDateString("zh-CN")
+    : null;
+  return {
+    expiryDate,
+    remaining: raw ? formatExpiry(raw) : null,
+    cost: node.price > 0 ? `${node.currency}${Number(node.price).toFixed(2)}` : null,
+    cycle: node.billingCycle ? cycleLabel(Number(node.billingCycle)) : null,
+  };
+});
 
 function latencyColor(index) {
   return ["blue", "green", "orange"][index % 3];
@@ -156,7 +189,9 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
           <div><span><AppIcon name="activity" /> 实时速度</span><b><AppIcon name="upload" /> {{ formatByteRate(node.up, node.upUnit).value }} {{ formatByteRate(node.up, node.upUnit).unit }} · <AppIcon name="download" /> {{ formatByteRate(node.down, node.downUnit).value }} {{ formatByteRate(node.down, node.downUnit).unit }}</b></div>
           <div><span><AppIcon name="activity" /> 峰值速度</span><b><AppIcon name="upload" /> {{ formatPeak(node.peakUp, node.peakUpAt) }} · <AppIcon name="download" /> {{ formatPeak(node.peakDown, node.peakDownAt) }}</b></div>
           <div><span><AppIcon name="database" /> 累计流量</span><b><AppIcon name="upload" /> {{ node.out }} · <AppIcon name="download" /> {{ node.in }}</b></div>
-          <div><span><AppIcon name="network" /> 连接 / 进程</span><b>{{ formatConnectionProcess(node) }}</b></div>
+          <div><span><AppIcon name="database" /> 流量限额</span><b>{{ trafficUsage ? `${trafficUsage.text}${trafficUsage.percent}` : "暂无数据" }}</b></div>
+          <div><span><AppIcon name="network" /> 连接数</span><b>{{ Number.isFinite(node.connectionCount) ? node.connectionCount : "暂无数据" }}</b></div>
+          <div><span><AppIcon name="server" /> 进程数</span><b>{{ Number.isFinite(node.processCount) ? node.processCount : "暂无数据" }}</b></div>
         </div>
       </section>
       <section class="info-panel">
@@ -164,8 +199,19 @@ onBeforeUnmount(() => document.removeEventListener("click", closeHostMenu));
         <div class="info-items">
           <div><span><AppIcon name="server" /> 操作系统</span><b><SystemIcon :system="node.os" /> {{ node.os }}</b></div>
           <div><span><AppIcon name="cpu" /> 内核版本</span><b>{{ node.kernelVersion || "暂无数据" }}</b></div>
-          <div><span><AppIcon name="clock" /> 运行时间</span><b>{{ node.uptimeText || "暂无数据" }}</b></div>
+          <div><span><AppIcon name="monitor" /> 虚拟化</span><b>{{ node.virtualization || "暂无数据" }}</b></div>
           <div><span><AppIcon name="database" /> 图形设备</span><b>{{ node.gpuName || "暂无数据" }}</b></div>
+          <div><span><AppIcon name="clock" /> 运行时间</span><b>{{ node.uptimeText || "暂无数据" }}</b></div>
+          <div><span><AppIcon name="activity" /> 平均负载</span><b v-if="loadInfo" class="load-chips"><i v-for="item in loadInfo" :key="item.label">{{ item.label }} {{ item.value }}</i></b><b v-else>暂无数据</b></div>
+        </div>
+      </section>
+      <section class="info-panel is-billing">
+        <h2><AppIcon name="wallet" /> 账单信息</h2>
+        <div class="info-items">
+          <div><span><AppIcon name="clock" /> 到期日</span><b>{{ billing.expiryDate || (billing.remaining === "长期" ? "长期有效" : "暂无数据") }}</b></div>
+          <div><span><AppIcon name="activity" /> 剩余天数</span><b>{{ billing.remaining || "暂无数据" }}</b></div>
+          <div><span><AppIcon name="wallet" /> 续费价格</span><b>{{ billing.cost ? `${billing.cost}${billing.cycle ? ` / ${billing.cycle}` : ""}` : "免费或未设置" }}</b></div>
+          <div><span><AppIcon name="database" /> 计费周期</span><b>{{ billing.cycle || "暂无数据" }}</b></div>
         </div>
       </section>
     </div>

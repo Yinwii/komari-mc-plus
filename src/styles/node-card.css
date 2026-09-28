@@ -138,6 +138,16 @@
   color: #45ad6e;
 }
 
+.node-meta .expire-rest {
+  font-style: normal;
+  font-size: 10.5px;
+  color: #6b9d82;
+  background: rgba(69, 173, 110, 0.12);
+  border-radius: 6px;
+  padding: 1px 5px;
+  margin-left: 4px;
+}
+
 .node-meta .cost {
   color: #3d9d69;
 }

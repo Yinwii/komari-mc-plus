@@ -1,0 +1,192 @@
+/* 节点列表视图：紧凑表格，行可点击进入详情。 */
+
+.node-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e6eaf0;
+  border-radius: 14px;
+  background: #fff;
+  scrollbar-width: thin;
+}
+
+.node-table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.node-table th {
+  position: sticky;
+  top: 0;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  color: #7a8698;
+  background: #f8fafc;
+  border-bottom: 1px solid #e6eaf0;
+  white-space: nowrap;
+}
+
+.node-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #eef1f5;
+  white-space: nowrap;
+  color: #2a3342;
+  font-variant-numeric: tabular-nums;
+}
+
+.node-table tbody tr {
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.node-table tbody tr:hover {
+  background: #f2f7fb;
+}
+
+.node-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.nt-center { text-align: center; }
+.nt-metric { min-width: 90px; }
+.nt-right { text-align: right; }
+
+.nt-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 320px;
+}
+
+.nt-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: #1f2733;
+}
+
+.nt-flag {
+  flex: 0 0 auto;
+}
+
+.nt-usage {
+  display: inline-block;
+  vertical-align: middle;
+  width: 52px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 4px;
+  background: #edf0f4;
+  overflow: hidden;
+}
+
+.nt-usage i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.nt-usage .is-ok { background: #45ad6e; }
+.nt-usage .is-warn { background: #e0a53f; }
+.nt-usage .is-danger { background: #d5493f; }
+
+.nt-metric b {
+  font-weight: 500;
+  font-size: 12.5px;
+}
+
+.nt-rate-up { color: #2f7fd0; }
+.nt-rate-down { color: #c06b3e; }
+
+.nt-expire {
+  color: #45ad6e;
+  font-size: 12.5px;
+}
+
+/* 深色主题 */
+.monitor-app.is-dark .node-table-wrap {
+  background: #1b212d;
+  border-color: #2e3949;
+}
+
+.monitor-app.is-dark .node-table th {
+  background: #202836;
+  border-color: #2e3949;
+  color: #8d99ad;
+}
+
+.monitor-app.is-dark .node-table td {
+  border-color: #26303f;
+  color: #cfd8e6;
+}
+
+.monitor-app.is-dark .node-table tbody tr:hover {
+  background: #232c3b;
+}
+
+.monitor-app.is-dark .nt-name-text {
+  color: #e8edf5;
+}
+
+.monitor-app.is-dark .nt-usage {
+  background: #2b3546;
+}
+
+.monitor-app.is-dark .nt-rate-up { color: #6aa9e8; }
+.monitor-app.is-dark .nt-rate-down { color: #e08d5f; }
+
+/* 视图切换按钮组 */
+.view-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #e2e7ee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.view-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #8b97a8;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.view-switch button:hover {
+  color: #3d4757;
+}
+
+.view-switch button.active {
+  background: #eaf1f8;
+  color: #2f6bb0;
+}
+
+.monitor-app.is-dark .view-switch {
+  background: #232c3b;
+  border-color: #334054;
+}
+
+.monitor-app.is-dark .view-switch button {
+  color: #8d99ad;
+}
+
+.monitor-app.is-dark .view-switch button.active {
+  background: #2c3a4e;
+  color: #7fb3e8;
+}
+
+@media (max-width: 720px) {
+  .node-table-wrap {
+    border-radius: 12px;
+  }
+}

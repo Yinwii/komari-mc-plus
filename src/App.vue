@@ -4,9 +4,11 @@ import Toolbar from "./components/Toolbar.vue";
 import OverviewCards from "./components/OverviewCards.vue";
 import GroupFilter from "./components/GroupFilter.vue";
 import NodeCard from "./components/NodeCard.vue";
+import NodeListView from "./components/NodeListView.vue";
 import NodeDetails from "./components/NodeDetails.vue";
 import RemainingValuePanel from "./components/RemainingValuePanel.vue";
-import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRealtime } from "./services/komariApi.js";
+import { LayoutGrid, Rows3 } from "lucide-vue-next";
+import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRealtime, toNodeModel } from "./services/komariApi.js";
 import { getRpcTransportState } from "./services/rpc.js";
 import { calculateAssets, fetchExchangeRates } from "./services/assets.js";
 import { fetchThemeSettings, normalizeSettings, resolveAppearance, syncAdminAppearance } from "./services/themeSettings.js";
@@ -76,6 +78,23 @@ function onToggleWallpaper() {
   wallpaper.value = setWallpaperEnabled(!wallpaper.value.enabled);
 }
 const activeGroup = ref("all");
+const VIEW_MODE_KEY = "komari-view-mode";
+const viewMode = ref(readViewMode());
+function readViewMode() {
+  try {
+    return localStorage.getItem(VIEW_MODE_KEY) === "list" ? "list" : "card";
+  } catch {
+    return "card";
+  }
+}
+function setViewMode(mode) {
+  viewMode.value = mode;
+  try {
+    localStorage.setItem(VIEW_MODE_KEY, mode);
+  } catch {
+    // 存储不可用时仅本次会话生效。
+  }
+}
 const selectedNode = ref(null);
 const isLoading = ref(true);
 const groups = ref([]);
@@ -186,6 +205,14 @@ onMounted(() => {
   realtimeTimer = window.setInterval(refreshRealtimeData, 2000);
   void initWallpaper().then(() => { wallpaper.value = { ...loadWallpaperState() }; });
   if (window.location.hash === "#value") showValuePanel.value = true;
+  if (window.location.hash === "#list") setViewMode("list");
+  if (window.location.hash.startsWith("#demo")) {
+    nodes.value = makeDemoNodes();
+    groups.value = getGroupsFromNodes(nodes.value);
+    selectGroup("all");
+    if (window.location.hash === "#demo-value") showValuePanel.value = true;
+    if (window.location.hash === "#demo-detail") openNode(nodes.value[0]);
+  }
 });
 onBeforeUnmount(() => {
   refreshStopped = true;
@@ -208,8 +235,33 @@ function getGroupsFromNodes(items) {
   return [...counts].map(([code, count]) => ({ code, count }));
 }
 
-function getOverviewFromNodes(items) {
-  const online = items.filter((node) => node.status === "online").length;
+/** 无后端时的演示数据：访问 #demo / #demo-value 使用，便于预览与联调。 */
+function makeDemoNodes() {
+  const day = 86400000;
+  const now = Date.now();
+  const demoStats = {
+    online: true, cpu: { usage: 12.5 }, ram: { used: 1024 ** 3, total: 4 * 1024 ** 3 },
+    disk: { used: 20 * 1024 ** 3, total: 80 * 1024 ** 3 },
+    network: { up: 2048, down: 8192, totalUp: 34.7 * 1024 ** 3, totalDown: 35.2 * 1024 ** 3 },
+    connections: { tcp: 12, udp: 5 }, process: 93, uptime: 62 * 86400 + 16 * 3600,
+    load: { load1: 0.1, load5: 0.03, load15: 0.01 }, updated_at: new Date().toISOString(),
+  };
+  const raw = (over) => ({
+    uuid: "demo", name: "demo", region: "", group: "", os: "Debian 12",
+    price: 0, currency: "$", billing_cycle: 365, expired_at: null, traffic_limit: 0,
+    cpu_cores: 2, mem_total: 4 * 1024 ** 3, disk_total: 80 * 1024 ** 3,
+    latestStats: demoStats,
+    ...over,
+  });
+  return [
+    toNodeModel(raw({ uuid: "demo-1", name: "eoefjerqs.colocrossing.cloud", region: "🇺🇸", group: "US", price: 11, currency: "$", billing_cycle: 365, expired_at: new Date(now + 122 * day).toISOString(), traffic_limit: 2 * 1024 ** 4 }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-2", name: "hk-cmi.example.com", region: "🇭🇰", group: "香港 CMI", price: 35, currency: "¥", billing_cycle: 30, expired_at: new Date(now + 18 * day).toISOString(), traffic_limit: 1024 ** 4 }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-3", name: "jp-tokyo.example.com", region: "🇯🇵", group: "JP 东京", os: "AlmaLinux 9", price: 6.5, currency: "$", billing_cycle: 30, expired_at: new Date(now + 60 * day).toISOString() }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-4", name: "de-fra.example.com", region: "德国 法兰克福", group: "欧洲", os: "Debian 11", currency: "€", billing_cycle: 0 }), [raw().latestStats]),
+  ];
+}
+
+function getOverviewFromNodes(items) {  const online = items.filter((node) => node.status === "online").length;
   const trafficUp = items.reduce((sum, node) => sum + (node.trafficUpBytes || 0), 0);
   const trafficDown = items.reduce((sum, node) => sum + (node.trafficDownBytes || 0), 0);
   const speedUp = items.reduce((sum, node) => sum + (Number(node.up) || 0), 0);
@@ -271,8 +323,12 @@ function getOverviewFromNodes(items) {
           :active-group="activeGroup"
           @select="selectGroup"
         />
+        <div class="view-switch" role="tablist" aria-label="视图切换">
+          <button :class="{ active: viewMode === 'card' }" :aria-pressed="viewMode === 'card'" title="卡片视图" aria-label="卡片视图" @click="setViewMode('card')"><LayoutGrid :size="16" :stroke-width="1.8" /></button>
+          <button :class="{ active: viewMode === 'list' }" :aria-pressed="viewMode === 'list'" title="列表视图" aria-label="列表视图" @click="setViewMode('list')"><Rows3 :size="16" :stroke-width="1.8" /></button>
+        </div>
       </div>
-      <section class="node-grid">
+      <section v-if="viewMode === 'card'" class="node-grid">
         <NodeCard
           v-for="node in filteredNodes"
           :key="node.name"
@@ -281,6 +337,7 @@ function getOverviewFromNodes(items) {
           @select="openNode"
         />
       </section>
+      <NodeListView v-else :nodes="filteredNodes" @select="openNode" />
       <p v-if="!isLoading && !errorMessage && filteredNodes.length === 0" class="empty-state">暂无节点</p>
     </main>
     <NodeDetails

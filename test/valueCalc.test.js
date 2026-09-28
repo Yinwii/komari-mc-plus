@@ -86,16 +86,30 @@ test("汇总：无法获取汇率时按币种分组且 total.cny 为空", () => 
   assert.equal(summary.total.byCurrency.get("$").value, 100);
 });
 
-test("文本与 HTML 报告包含关键数字与本地日期", () => {
+test("文本与 HTML 报告为 jsq 风格 emoji 清单", () => {
   const item = computeNodeValue(makeNode(), NOW);
   const summary = summarizeValues([item], null, NOW);
-  const text = buildTextReport([item], summary, { title: "T", dateText: "2026-09-28 12:00:00" });
-  assert.match(text, /T/);
-  assert.match(text, /测试节点/);
-  assert.match(text, /2027-03-28/);
-  const html = buildHtmlReport([item], summary, { title: "T", dateText: "2026-09-28 12:00:00" });
-  assert.match(html, /<table/);
-  assert.match(html, /2027-03-28/);
+  const text = buildTextReport([item], summary, { dateText: "2026-09-28 12:00:00" });
+  assert.match(text, /## 🐔 VPS 剩余价值/);
+  assert.match(text, /- 📅 交易日期：2026-09-28/);
+  assert.match(text, /### 🖥 测试节点/);
+  assert.match(text, /- 💰 续费价格：365\.00 元\/年付/);
+  assert.match(text, /- ⏳ 剩余天数：181天（2027-03-28 到期）/);
+  assert.match(text, /- 💎 剩余价值：181\.00元/);
+  assert.match(text, /- 🧾 溢价 \/ 总价：— \/ 181\.00元/);
+  const html = buildHtmlReport([item], summary, { dateText: "2026-09-28 12:00:00" });
+  assert.match(html, /🐔 VPS 剩余价值/);
+  assert.match(html, /📅 交易日期：2026-09-28/);
+  assert.match(html, /剩余价值：/);
+});
+
+test("非 CNY 节点报告带汇率换算", () => {
+  const item = computeNodeValue(makeNode({ currency: "$", price: 100, billingCycle: 365, expiredAt: "2027-03-28T00:00:00+08:00" }), NOW);
+  const summary = summarizeValues([item], { USD: 1 / 6.7195, aliases }, NOW);
+  const text = buildTextReport([item], summary, { dateText: "2026-09-28", rates: { USD: 1 / 6.7195, aliases }, rateLines: ["1 $ ≈ 6.7195 CNY"] });
+  assert.match(text, /- 💹 外币汇率：1 \$ ≈ 6\.7195 CNY/);
+  assert.match(text, /- 💰 续费价格：100\.00 \$\/年付（约 671\.95 元）/);
+  assert.match(text, /- 💎 剩余价值：333\.21元（约 49\.59 \$）/);
 });
 
 test("工具函数：周期选项齐全、日期解析与本地格式化", () => {

@@ -13,6 +13,15 @@ const props = defineProps({ node: { type: Object, required: true }, settings: { 
 const pingLines = computed(() => getCardPingLines(props.node.pingLines || [], props.settings));
 defineEmits(["select"]);
 
+const expiryInfo = computed(() => {
+  const raw = props.node.expiredAt;
+  if (!raw || !Number.isFinite(Date.parse(raw))) return null;
+  const days = Math.ceil((Date.parse(raw) - Date.now()) / 86400000);
+  if (days > 36500) return { date: "", rest: "长期" };
+  const date = new Date(raw).toLocaleDateString("zh-CN");
+  return { date, rest: days > 0 ? `剩 ${days} 天` : "已到期" };
+});
+
 function latencyTone(value) {
   if (value < 0) return "red";
   if (value <= 50) return "deep-green";
@@ -63,7 +72,7 @@ function getTrafficText(node) {
   >
     <div class="node-head">
       <div class="node-title">
-        <FlagIcon class="node-flag" :code="node.group" :label="`${node.group} 节点`" />
+        <FlagIcon class="node-flag" :code="node.region || node.group" :label="`${node.region || node.group} 节点`" />
         <h2>{{ node.name }}</h2>
       </div>
       <div class="node-actions">
@@ -79,7 +88,8 @@ function getTrafficText(node) {
     </div>
     <div class="node-meta">
       <span><AppIcon name="activity" /> 在线 <b>{{ node.online }}</b></span>
-      <span><AppIcon name="clock" /> 到期 <b class="expire">{{ node.expires }}</b></span>
+      <span v-if="expiryInfo"><AppIcon name="clock" /> 到期 <b class="expire">{{ expiryInfo.date || expiryInfo.rest }}</b><i v-if="expiryInfo.date" class="expire-rest">{{ expiryInfo.rest }}</i></span>
+      <span v-else><AppIcon name="clock" /> 到期 <b class="expire">--</b></span>
       <span
         ><AppIcon name="wallet" />
         <b class="cost">{{ formatCost(node) }}</b></span
