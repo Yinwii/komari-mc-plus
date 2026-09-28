@@ -128,3 +128,8 @@
 .monitor-app.is-dark.has-wallpaper .chart-card {
   background: rgba(23, 34, 49, 0.6);
 }
+
+.monitor-app.has-wallpaper:not(.mc-theme) .region-pill { background: rgba(255, 255, 255, 0.55); }
+.monitor-app.has-wallpaper:not(.mc-theme) .region-rate .rate-track { background: rgba(255, 255, 255, 0.5); }
+.monitor-app.is-dark.has-wallpaper .region-pill { background: rgba(23, 34, 49, 0.55); }
+.monitor-app.is-dark.has-wallpaper .region-rate .rate-track { background: rgba(150, 180, 220, 0.14); }

@@ -15,6 +15,8 @@ const props = defineProps({
   autoCollapse: { type: [Number, String], default: 5 },
   // 头像图标：与 komari-theme.json 的 visitorIcon select 选项文字一一对应；默认「扫描框+地球」为定制组合图形。
   icon: { type: String, default: "扫描框+地球" },
+  // 收纳按钮样式：与 komari-theme.json 的 visitorMiniStyle select 选项文字一一对应。
+  miniStyle: { type: String, default: "圆钮" },
 });
 
 const AVATAR_ICONS = {
@@ -29,7 +31,31 @@ const AVATAR_ICONS = {
 };
 const avatarIcon = computed(() => AVATAR_ICONS[props.icon] || null);
 
+// 默认定制图形（扫描框+地球）：头像与收纳按钮共用，保证图标全局一致。
+const DEFAULT_ICON_SVG =
+  '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16" />'
+  + '<circle cx="12" cy="12" r="5.6" />'
+  + '<path d="M6.4 12h11.2M12 6.4a8.6 8.6 0 0 1 0 11.2M12 6.4a8.6 8.6 0 0 0 0 11.2" />'
+  + "</svg>";
+
+// 收纳按钮样式变体：圆钮（默认）/ 渐变圆钮 / 胶囊文字 / 贴边标签。
+const MINI_STYLES = ["圆钮", "渐变圆钮", "胶囊文字", "贴边标签"];
+const miniClass = computed(() => {
+  const style = MINI_STYLES.includes(props.miniStyle) ? props.miniStyle : "圆钮";
+  return { "is-gradient": style === "渐变圆钮", "is-pill": style === "胶囊文字", "is-edge-tab": style === "贴边标签" };
+});
+const miniHasText = computed(() => ["胶囊文字", "贴边标签"].includes(props.miniStyle));
+const isEdgeLayer = computed(() => props.miniStyle === "贴边标签" && state.value.mode === "mini");
+
 const STORE_KEY = "komari-visitor-card-v1";
+// 按本地日期取今天（YYYY-MM-DD）。必须先于 readState 声明：readState 会在 setup 阶段同步调用，
+// 若放在其后会因 const 暂时性死区（TDZ）抛 ReferenceError，被 catch 吞掉导致收纳/今日隐藏状态失效。
+const today = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
 // mode: "open" 展开 | "mini" 收纳贴边；"closed-today" 按天隐藏
 // 必须 setup 阶段同步初始化：mode 计算属性在首次渲染就会读取，初始为 null 会白屏。
 const state = ref(readState());
@@ -59,11 +85,6 @@ function scheduleAutoCollapse() {
     }, collapseSeconds.value * 1000);
   }
 }
-
-const today = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
 
 function readState() {
   try {
@@ -210,15 +231,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="visible" class="visitor-layer" aria-live="polite">
+  <div v-if="visible" class="visitor-layer" :class="{ 'is-edge': isEdgeLayer }" aria-live="polite">
     <button
       v-if="mode === 'mini'"
       class="visitor-mini"
+      :class="miniClass"
       title="显示访客信息"
       aria-label="显示访客信息"
       @click="expand"
     >
-      <Network :size="16" :stroke-width="1.8" aria-hidden="true" />
+      <span v-if="!avatarIcon" class="visitor-mini-icon" v-html="DEFAULT_ICON_SVG" />
+      <component :is="avatarIcon" v-else :size="16" :stroke-width="1.9" aria-hidden="true" />
+      <span v-if="miniHasText" class="visitor-mini-text">访客信息</span>
     </button>
     <transition name="visitor-pop">
       <section
@@ -231,11 +255,7 @@ onBeforeUnmount(() => {
       >
         <header class="visitor-head">
           <div class="visitor-avatar">
-            <svg v-if="!avatarIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16" />
-              <circle cx="12" cy="12" r="5.6" />
-              <path d="M6.4 12h11.2M12 6.4a8.6 8.6 0 0 1 0 11.2M12 6.4a8.6 8.6 0 0 0 0 11.2" />
-            </svg>
+            <span v-if="!avatarIcon" class="visitor-default-icon" v-html="DEFAULT_ICON_SVG" />
             <component :is="avatarIcon" v-else :size="18" :stroke-width="1.9" aria-hidden="true" />
           </div>
           <div class="visitor-title">

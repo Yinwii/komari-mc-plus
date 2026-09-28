@@ -323,18 +323,30 @@ function selectGroup(group) {
 function getGroupsFromNodes(items) {
   const counts = new Map();
   const regions = new Map();
+  const firstRegion = new Map();
   items.forEach((node) => {
     counts.set(node.group, (counts.get(node.group) || 0) + 1);
-    // 分组旗标：组内所有节点的 GeoIP region 一致时采用；商家名分组跨多国时不显示，避免误导。
-    if (node.region) {
-      const set = regions.get(node.group) || new Set();
-      set.add(node.region);
-      regions.set(node.group, set);
+    // 分组旗标：记录组内各地区分布（按出现顺序），供多种分组图标样式使用。
+    const code = String(node.region || "").trim();
+    if (code) {
+      if (!firstRegion.has(node.group)) firstRegion.set(node.group, code);
+      const map = regions.get(node.group) || new Map();
+      map.set(code, (map.get(code) || 0) + 1);
+      regions.set(node.group, map);
     }
   });
   return [...counts].map(([code, count]) => {
-    const set = regions.get(code);
-    return { code, count, region: set && set.size === 1 ? [...set][0] : "" };
+    const map = regions.get(code);
+    const regionList = map ? [...map].map(([region, regionCount]) => ({ region, count: regionCount })) : [];
+    // 节点数多的地区排前；数量相同保持出现顺序。
+    regionList.sort((a, b) => b.count - a.count);
+    return {
+      code,
+      count,
+      region: regionList.length === 1 ? regionList[0].region : "",
+      firstRegion: firstRegion.get(code) || "",
+      regions: regionList,
+    };
   });
 }
 
@@ -400,14 +412,21 @@ function makeDemoNodes() {  const day = 86400000;
     ...over,
   });
   return [
-    toNodeModel(raw({ uuid: "demo-1", name: "eoefjerqs.colocrossing.cloud", region: "🇺🇸", group: "US", price: 11, currency: "$", billing_cycle: 365, expired_at: new Date(now + 122 * day).toISOString(), traffic_limit: 2 * 1024 ** 4 }), [raw().latestStats]),
-    toNodeModel(raw({ uuid: "demo-2", name: "hk-cmi.example.com", region: "🇭🇰", group: "香港 CMI", price: 35, currency: "¥", billing_cycle: 30, expired_at: new Date(now + 18 * day).toISOString(), traffic_limit: 1024 ** 4 }), [raw().latestStats]),
-    toNodeModel(raw({ uuid: "demo-3", name: "jp-tokyo.example.com", region: "🇯🇵", group: "JP 东京", os: "AlmaLinux 9", price: 6.5, currency: "$", billing_cycle: 30, expired_at: new Date(now + 60 * day).toISOString() }), [raw().latestStats]),
-    toNodeModel(raw({ uuid: "demo-4", name: "de-fra.example.com", region: "德国 法兰克福", group: "欧洲", os: "Debian 11", currency: "€", billing_cycle: 0 }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-1", name: "eoefjerqs.colocrossing.cloud", region: "US", group: "US", price: 11, currency: "$", billing_cycle: 365, expired_at: new Date(now + 122 * day).toISOString(), traffic_limit: 2 * 1024 ** 4 }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-2", name: "hk-cmi.example.com", region: "HK", group: "香港 CMI", price: 35, currency: "¥", billing_cycle: 30, expired_at: new Date(now + 18 * day).toISOString(), traffic_limit: 1024 ** 4 }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-3", name: "jp-tokyo.example.com", region: "JP", group: "JP 东京", os: "AlmaLinux 9", price: 6.5, currency: "$", billing_cycle: 30, expired_at: new Date(now + 60 * day).toISOString() }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-4", name: "de-fra.example.com", region: "DE", group: "欧洲", os: "Debian 11", currency: "€", billing_cycle: 0 }), [raw().latestStats]),
+    // FREE 分组：多地区混合，演示「双旗对拼 / 国旗轮换 / 主旗+角标」等分组图标样式；demo-6 离线演示灰显。
+    toNodeModel(raw({ uuid: "demo-5", name: "free-la.example.com", region: "US", group: "FREE", price: 0 }), [raw().latestStats]),
+    toNodeModel(raw({ uuid: "demo-6", name: "free-fra.example.com", region: "DE", group: "FREE", price: 0 }), [{ ...raw().latestStats, online: false }]),
+    toNodeModel(raw({ uuid: "demo-7", name: "free-nrt.example.com", region: "JP", group: "FREE", price: 0 }), [raw().latestStats]),
   ];
 }
 
-function getOverviewFromNodes(items) {  const online = items.filter((node) => node.status === "online").length;
+function getOverviewFromNodes(items) {
+  const online = items.filter((node) => node.status === "online").length;
+  // 百分比最多两位小数并去掉尾零：100%、87.5%、33.33%，不硬凑 100.00%。
+  const percentText = (value) => `${parseFloat(value.toFixed(2))}%`;
   const trafficUp = items.reduce((sum, node) => sum + (node.trafficUpBytes || 0), 0);
   const trafficDown = items.reduce((sum, node) => sum + (node.trafficDownBytes || 0), 0);
   const speedUp = items.reduce((sum, node) => sum + (Number(node.up) || 0), 0);
@@ -417,7 +436,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
   const downloadRate = formatByteRate(speedDown, "B/s");
   const totalRate = formatByteRate(speedUp + speedDown, "B/s");
   return {
-    online: { current: online, total: items.length, rate: items.length ? `${((online / items.length) * 100).toFixed(2)}%` : "0%" },
+    online: { current: online, total: items.length, rate: items.length ? percentText((online / items.length) * 100) : "0%" },
     assets: calculateAssets(items, rates.value),
     traffic: { today: toGb(trafficUp + trafficDown), unit: "GB", upload: `${toGb(trafficUp)} GB`, download: `${toGb(trafficDown)} GB` },
     bandwidth: {
@@ -461,13 +480,14 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
       <p>加载节点...</p>
     </section>
     <main v-else-if="!selectedNode" :aria-busy="isLoading">
-      <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" @open-calc="openCalcCard" />
+      <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" :nodes="nodes" @open-calc="openCalcCard" />
       <p v-if="settingsError && !isDemoMode" class="data-error" role="alert">{{ settingsError }}</p>
       <p v-if="errorMessage && !isDemoMode" class="data-error" role="alert">{{ errorMessage }}</p>
       <div class="node-filters">
         <GroupFilter
           :groups="groups"
           :active-group="activeGroup"
+          :icon-mode="settings.groupIconMode"
           @select="selectGroup"
         />
         <div class="view-switch" role="tablist" aria-label="视图切换">
@@ -499,7 +519,7 @@ function getOverviewFromNodes(items) {  const online = items.filter((node) => no
     />
     <RemainingValuePanel v-if="showValuePanel" :nodes="nodes" @close="showValuePanel = false" @open-calc="openCalcCard" />
     <ValueCalculatorModal v-if="calcCardUuids.length" :nodes="nodes" :initial-uuids="calcCardUuids" @close="calcCardUuids = []" />
-    <VisitorCard :enabled="settings.showVisitorCard !== false" :auto-collapse="settings.visitorAutoCollapse" :icon="settings.visitorIcon" />
+    <VisitorCard :enabled="settings.showVisitorCard !== false" :auto-collapse="settings.visitorAutoCollapse" :icon="settings.visitorIcon" :mini-style="settings.visitorMiniStyle" />
     <Transition name="toast-fade">
       <p v-if="toast" class="app-toast" role="status" aria-live="polite">{{ toast }}</p>
     </Transition>

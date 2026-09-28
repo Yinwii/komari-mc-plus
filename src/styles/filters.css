@@ -62,3 +62,64 @@
   font-style: normal;
   font-size: 10px;
 }
+
+/* 分组图标样式（GroupIcon.vue）：唯一地区旗 / 首节点 / 双旗对拼 / 轮换 / 主旗+角标 */
+.group-flag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  flex: 0 0 auto;
+}
+
+.group-flag-split {
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.group-flag-split .split-half {
+  margin-right: 0;
+}
+
+.group-flag-split .split-half:first-child :is(.flag-icon, .flag-fallback) {
+  width: 9px;
+  border-radius: 3px 0 0 3px;
+}
+
+.group-flag-split .split-half:last-child :is(.flag-icon, .flag-fallback) {
+  width: 9px;
+  border-radius: 0 3px 3px 0;
+}
+
+.group-flag-badge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border: 1px solid #e8e8ea;
+  border-radius: 7px;
+  background: #fff;
+  color: #8b8e95;
+  font-size: 9px;
+  font-style: normal;
+  line-height: 12px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.flag-fade-enter-active,
+.flag-fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.flag-fade-enter-from,
+.flag-fade-leave-to {
+  opacity: 0;
+}
+
+.group-flag-split .split-half:only-child :is(.flag-icon, .flag-fallback) {
+  width: 18px;
+  border-radius: 3px;
+}

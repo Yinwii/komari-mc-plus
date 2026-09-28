@@ -145,7 +145,13 @@
   background: rgba(38, 49, 60, 0.06);
 }
 
-/* 收纳态：贴边小圆钮 */
+/* 头像内默认定制图形（扫描框+地球）：v-html 的 svg 固有尺寸偏小，用 CSS 放大对齐 lucide 18px。 */
+.visitor-avatar svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* 收纳态：贴边按钮（图标与「头像图标」设置保持一致） */
 .visitor-mini {
   display: grid;
   place-items: center;
@@ -165,6 +171,60 @@
 .visitor-mini:hover {
   transform: translateY(-2px);
   color: #12855c;
+}
+
+.visitor-mini-icon {
+  display: inline-flex;
+}
+
+/* 变体：渐变圆钮 —— 与头像渐变色块同色，白色图形 */
+.visitor-mini.is-gradient {
+  border-color: transparent;
+  background: linear-gradient(135deg, #4f8fdd, #12855c);
+  color: #fff;
+}
+
+.visitor-mini.is-gradient:hover {
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(18, 96, 66, 0.38);
+}
+
+/* 变体：胶囊文字 —— 图标 + 「访客信息」字样 */
+.visitor-mini.is-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: auto;
+  height: 34px;
+  padding: 0 14px 0 11px;
+  border-radius: 17px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* 变体：贴边标签 —— 吸附屏幕左缘，仅右侧圆角 */
+.visitor-layer.is-edge {
+  left: 0;
+  bottom: 18px;
+}
+
+.visitor-mini.is-edge-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: auto;
+  height: 36px;
+  padding: 0 14px 0 12px;
+  border-left: 0;
+  border-radius: 0 12px 12px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.visitor-mini.is-edge-tab:hover {
+  transform: translateX(2px);
 }
 
 /* 进出场动画 */

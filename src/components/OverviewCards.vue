@@ -1,11 +1,13 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import AppIcon from "./AppIcon.vue";
+import FlagIcon from "./FlagIcon.vue";
 
 const props = defineProps({
   overview: { type: Object, required: true },
   settings: { type: Object, required: true },
   speedHistory: { type: Array, default: () => [] },
+  nodes: { type: Array, default: () => [] },
 });
 defineEmits(["open-calc"]);
 
@@ -35,17 +37,155 @@ const upSeries = computed(() => buildSeries("up"));
 const downPaths = computed(() => makePaths(downSeries.value));
 const upPaths = computed(() => makePaths(upSeries.value));
 const sparkReady = computed(() => Boolean(downPaths.value && upPaths.value));
+
+// 在线节点卡的地区展示：按 GeoIP region 聚合在线/总数，供四种样式使用。
+const REGION_MODES = ["国旗墙", "地区胶囊", "点阵地图", "分地区在线率"];
+// 访客本地切换的样式记忆：优先于后台默认值。
+const REGION_OVERRIDE_KEY = "komari-regions-display-v1";
+
+function readRegionOverride() {
+  try {
+    const value = JSON.parse(localStorage.getItem(REGION_OVERRIDE_KEY) || "null");
+    return REGION_MODES.includes(value) || value === "" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+const localRegionOverride = ref(readRegionOverride());
+
+const regionMode = computed(() => {
+  if (localRegionOverride.value !== null) return localRegionOverride.value;
+  return REGION_MODES.includes(props.settings.onlineRegionsDisplay) ? props.settings.onlineRegionsDisplay : "";
+});
+
+// 右上角按钮循环切换：关闭 → 四种样式 → 关闭，本地记忆。
+function cycleRegionMode() {
+  const cycle = ["", ...REGION_MODES];
+  const next = cycle[(cycle.indexOf(regionMode.value) + 1) % cycle.length];
+  localRegionOverride.value = next;
+  try {
+    localStorage.setItem(REGION_OVERRIDE_KEY, JSON.stringify(next));
+  } catch {
+    /* 隐私模式等场景下静默跳过 */
+  }
+}
+
+const regionStats = computed(() => {
+  const map = new Map();
+  props.nodes.forEach((node) => {
+    const region = String(node.region || "").trim();
+    if (!region) return;
+    const item = map.get(region) || { region, total: 0, online: 0 };
+    item.total += 1;
+    if (node.status === "online") item.online += 1;
+    map.set(region, item);
+  });
+  const list = [...map.values()];
+  // 在线多的排前，其次节点多的；最多展示 12 个地区避免卡片膨胀。
+  list.sort((a, b) => b.online - a.online || b.total - a.total);
+  return list.slice(0, 12);
+});
+
+const regionLitCount = computed(() => regionStats.value.filter((item) => item.online > 0).length);
+
+function regionTitle(item) {
+  return `${item.region}：在线 ${item.online} / ${item.total}`;
+}
+
+function regionDotClass(item) {
+  if (item.online === 0) return "is-off";
+  if (item.online < item.total) return "is-partial";
+  return "is-on";
+}
+
+// 点阵地图：常用国家/地区的简化点阵坐标（col,row），未收录地区不在地图上显示。
+const REGION_MAP_POS = {
+  US: [3, 2], CA: [4, 1], MX: [3, 4], BR: [8, 6], AR: [7, 8], CL: [7, 9],
+  GB: [10, 2], FR: [10, 3], DE: [11, 2], NL: [10, 2], ES: [9, 4], IT: [11, 4],
+  PL: [12, 2], SE: [12, 1], NO: [11, 1], FI: [13, 1], RU: [15, 2], UA: [13, 3],
+  TR: [13, 4], AE: [14, 5], SA: [13, 5], IL: [13, 4], EG: [12, 5], ZA: [12, 8],
+  IN: [16, 5], PK: [15, 5], KZ: [15, 3], CN: [18, 3], MN: [18, 2], JP: [21, 3],
+  KR: [20, 3], HK: [19, 4], TW: [19, 4], MO: [19, 4], SG: [18, 6], MY: [18, 5],
+  ID: [19, 7], TH: [17, 5], VN: [18, 5], PH: [19, 5], AU: [20, 8], NZ: [22, 9],
+};
+const MAP_ROWS = 10;
+const MAP_COLS = 24;
+
+// 世界点阵：粗略的陆地分布（X=陆地），用于衬托点亮的地区。
+const WORLD_ROWS = [
+  "........................",
+  "......XX.......XX.......",
+  "..XX..XXX..XXXXXXXXXXXX.",
+  "..XXXXXXXXXXXXXXXXXXXXXX",
+  "...XXXXXXXXXXXXXXX..XX..",
+  "....XXXXXXXXXXX.....X...",
+  ".....XX..XXXXX..........",
+  "..........XXX.......XX..",
+  "...................XXX..",
+  "........................",
+];
+
+const mapDots = computed(() => {
+  if (regionMode.value !== "点阵地图") return [];
+  const lit = new Set(regionStats.value.filter((item) => item.online > 0).map((item) => item.region));
+  const dots = [];
+  WORLD_ROWS.forEach((row, r) => {
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] !== "X") continue;
+      dots.push({ x: c * 9 + 5, y: r * 7.2 + 4, lit: false });
+    }
+  });
+  // 有在线节点的国家覆盖为高亮大点（近似经纬位置）。
+  regionStats.value.forEach((item) => {
+    const pos = REGION_MAP_POS[item.region];
+    if (!pos || item.online === 0) return;
+    dots.push({ x: pos[0] * 9 + 5, y: pos[1] * 7.2 + 4, lit: true, region: item.region, title: regionTitle(item) });
+  });
+  return dots;
+});
 </script>
 
 <template>
   <section v-if="settings.showStatsBar && (settings.showOnline || settings.showAssets || settings.showTraffic || settings.showSpeed)" class="overview-grid">
-    <div v-if="settings.showOnline" class="overview-card">
-      <div class="overview-label">在线节点</div>
+    <div v-if="settings.showOnline" class="overview-card" :class="{ 'has-regions': regionMode && regionStats.length }">
+      <div class="overview-label">
+        在线节点
+        <button class="overview-calc-btn overview-style-btn" type="button" :title="`切换地区展示样式（当前：${regionMode || '关闭'}）`" @click="cycleRegionMode">{{ regionMode || "地区展示关" }} ⇄</button>
+      </div>
       <div class="overview-value">
         {{ overview.online.current
         }}<small>/ {{ overview.online.total }}</small>
       </div>
       <p class="overview-status"><b />在线率 {{ overview.online.rate }}</p>
+      <div v-if="regionMode && regionStats.length" class="overview-regions" :class="`is-${['国旗墙', '地区胶囊', '点阵地图', '分地区在线率'].indexOf(regionMode)}`">
+        <template v-if="regionMode === '国旗墙'">
+          <span v-for="item in regionStats" :key="item.region" class="region-flag" :class="regionDotClass(item)" :title="regionTitle(item)">
+            <FlagIcon :code="item.region" :label="regionTitle(item)" />
+          </span>
+          <small class="region-hint">点亮 {{ regionLitCount }} / {{ regionStats.length }} 地区</small>
+        </template>
+        <template v-else-if="regionMode === '地区胶囊'">
+          <span v-for="item in regionStats" :key="item.region" class="region-pill" :title="regionTitle(item)">
+            <i :class="regionDotClass(item)" />
+            <FlagIcon :code="item.region" :label="regionTitle(item)" />
+            <em>{{ item.online === 0 ? 0 : item.online < item.total ? `${item.online}/${item.total}` : item.total }}</em>
+          </span>
+        </template>
+        <template v-else-if="regionMode === '点阵地图'">
+          <svg class="region-map" viewBox="0 0 216 72" preserveAspectRatio="xMidYMid meet" role="img" aria-label="有在线节点的国家地区点阵地图">
+            <circle v-for="(dot, index) in mapDots" :key="index" :cx="dot.x" :cy="dot.y" :r="dot.lit ? 3.2 : 2.4" :class="dot.lit ? 'map-dot is-on' : 'map-dot'" :title="dot.title" />
+          </svg>
+          <small class="region-hint">点亮 {{ regionLitCount }} / {{ regionStats.length }} 地区</small>
+        </template>
+        <template v-else>
+          <span v-for="item in regionStats" :key="item.region" class="region-rate" :class="regionDotClass(item)" :title="regionTitle(item)">
+            <FlagIcon :code="item.region" :label="regionTitle(item)" class="rate-flag" />
+            <span class="rate-track"><span class="rate-fill" :class="regionDotClass(item)" :style="{ width: `${Math.round((item.online / item.total) * 100)}%` }" /></span>
+            <em>{{ item.online }}/{{ item.total }}</em>
+          </span>
+        </template>
+      </div>
       <span class="overview-icon"><AppIcon name="server" :size="22" /></span>
     </div>
     <div v-if="settings.showAssets" class="overview-card">

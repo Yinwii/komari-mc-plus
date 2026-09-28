@@ -22,3 +22,11 @@ Thumbs.db
 release/
 .playwright-cli/
 komari-theme-minecraft-*.zip
+
+# local debug screenshots
+shots/
+/v-*.png
+
+# local debug screenshots
+shots/
+/v-*.png

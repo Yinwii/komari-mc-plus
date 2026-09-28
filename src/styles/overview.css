@@ -198,3 +198,141 @@
 .monitor-app.is-dark .speed-spark {
   opacity: 0.85;
 }
+
+/* 在线节点卡：GeoIP 地区展示（国旗墙 / 地区胶囊 / 点阵地图 / 分地区在线率） */
+.overview-card.has-regions {
+  min-height: 0;
+}
+
+.overview-regions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #e6e6e8;
+}
+
+.overview-regions .region-hint {
+  flex-basis: 100%;
+  color: #9aa0a8;
+  font-size: 10px;
+}
+
+.overview-regions.is-1,
+.overview-regions.is-2,
+.overview-regions.is-3 {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* 国旗墙：在线点亮、离线灰显 */
+.overview-regions.is-0 .region-flag {
+  display: inline-flex;
+  border-radius: 3px;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.overview-regions.is-0 .region-flag.is-off {
+  opacity: 0.32;
+  filter: grayscale(1);
+}
+
+.overview-regions .region-flag :is(.flag-icon, .flag-fallback) {
+  width: 20px;
+  height: 15px;
+}
+
+/* 地区胶囊：状态点 + 国旗 + 在线数 */
+.region-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid #ececef;
+  border-radius: 9px;
+  background: #f7f7f8;
+  font-size: 10px;
+  color: #5b6068;
+}
+
+.region-pill i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.region-pill i.is-on { background: #17a05e; }
+.region-pill i.is-partial { background: #d39424; }
+.region-pill i.is-off { background: #d4574e; }
+
+.region-pill em {
+  font-style: normal;
+  font-weight: 600;
+}
+
+.region-pill :is(.flag-icon, .flag-fallback) {
+  width: 15px;
+  height: 11px;
+}
+
+/* 点阵地图 */
+.region-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.region-map .map-dot {
+  fill: #dcdde1;
+}
+
+.region-map .map-dot.is-on {
+  fill: #17a05e;
+}
+
+/* 分地区在线率 */
+.region-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: #71767e;
+}
+
+.region-rate .rate-flag {
+  flex: 0 0 auto;
+}
+
+.region-rate.is-off .rate-flag {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.region-rate .rate-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: #f0f0f2;
+  overflow: hidden;
+}
+
+.region-rate .rate-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #17a05e;
+  transition: width 0.4s ease;
+}
+
+.region-rate .rate-fill.is-partial { background: #d39424; }
+.region-rate .rate-fill.is-off { background: #d4574e; }
+
+.region-rate em {
+  min-width: 30px;
+  text-align: right;
+  font-style: normal;
+  font-weight: 600;
+}

@@ -331,3 +331,12 @@
   .hero-status.unknown { color: #f2ce7d; }
   .hero-status small { color: #e0e7dc; }
 }
+
+.monitor-app.is-dark .overview-regions { border-top-color: rgba(150,180,220,0.14); }
+.monitor-app.is-dark .overview-regions .region-hint { color: #6f7d8c; }
+.monitor-app.is-dark .region-pill { border-color: rgba(120,150,190,0.22); background: rgba(23,34,49,0.6); color: #b7c9dc; }
+.monitor-app.is-dark .region-rate { color: #9aaabd; }
+.monitor-app.is-dark .region-rate .rate-track { background: rgba(150,180,220,0.14); }
+.monitor-app.is-dark .region-map .map-dot { fill: rgba(150,180,220,0.25); }
+.monitor-app.is-dark .region-map .map-dot.is-on { fill: #59d4c5; }
+.monitor-app.is-dark .group-flag-badge { background: rgba(23,34,49,0.9); border-color: rgba(120,150,190,0.22); color: #9aaabd; }
