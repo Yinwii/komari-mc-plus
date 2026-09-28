@@ -486,7 +486,7 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
 .value-toast {
   position: absolute;
   left: 50%;
-  bottom: 26px;
+  top: 16px;
   transform: translateX(-50%);
   padding: 9px 16px;
   border-radius: 10px;
@@ -495,6 +495,8 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
   font-size: 13px;
   white-space: nowrap;
   box-shadow: 0 8px 24px rgba(10, 16, 30, 0.3);
+  pointer-events: none;
+  z-index: 10;
 }
 
 .value-toast-enter-active,
@@ -520,14 +522,15 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
   color: #eef2f8;
 }
 
-/* 深色下原生控件（日期选择器日历图标等）改用深色方案 */
+/* 深色下原生控件（日期选择器日历图标等）改用深色方案。
+   注意：color-scheme: dark 已让浏览器自绘浅色图标，
+   不能再叠加 filter: invert —— 会把图标反转回深色导致不可见。 */
 .monitor-app.is-dark input[type="date"].value-input {
   color-scheme: dark;
 }
 
 .monitor-app.is-dark input[type="date"].value-input::-webkit-calendar-picker-indicator {
-  filter: invert(0.85);
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .monitor-app.is-dark .value-head p,
@@ -778,7 +781,7 @@ input[type="date"].value-input:hover::-webkit-calendar-picker-indicator {
   }
 
   .value-toast {
-    bottom: 18px;
+    top: 14px;
     max-width: calc(100vw - 32px);
     white-space: normal;
     text-align: center;

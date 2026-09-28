@@ -12,7 +12,16 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const OVERRIDES_KEY = "komari-value-overrides-v1";
+const CONFIG_FIELDS_KEY = "komari-value-config-fields-v1";
 const MAX_CARDS = 4;
+
+/** 复制/图片可附带的服务器配置项（Komari 不提供端口带宽数据，故无该项）。 */
+const CONFIG_FIELDS = [
+  { key: "cpu", label: "CPU" },
+  { key: "ram", label: "内存" },
+  { key: "disk", label: "硬盘" },
+  { key: "traffic", label: "月流量" },
+];
 
 const CURRENCY_OPTIONS = [
   { symbol: "¥", code: "CNY", label: "CNY 人民币" },
@@ -46,7 +55,18 @@ function loadOverrides() {
   }
 }
 
+function loadConfigFields() {
+  const defaults = { cpu: true, ram: true, disk: true, traffic: true };
+  try {
+    const raw = JSON.parse(localStorage.getItem(CONFIG_FIELDS_KEY) || "{}");
+    return raw && typeof raw === "object" ? { ...defaults, ...raw } : defaults;
+  } catch {
+    return defaults;
+  }
+}
+
 const overrides = ref(loadOverrides());
+const configFields = ref(loadConfigFields());
 const rates = ref(null);
 const now = ref(Date.now());
 const toastMessage = ref("");
@@ -67,6 +87,25 @@ function patchOverride(uuid, patch) {
   persistOverrides();
 }
 
+function toggleConfigField(key) {
+  configFields.value = { ...configFields.value, [key]: !configFields.value[key] };
+  try {
+    localStorage.setItem(CONFIG_FIELDS_KEY, JSON.stringify(configFields.value));
+  } catch {
+    // 存储不可用时仅保留本次会话。
+  }
+}
+
+/** 按勾选拼接配置描述行（用于复制文本与图片）。 */
+function buildConfigLine(row) {
+  const parts = [];
+  if (configFields.value.cpu && row.cores > 0) parts.push(`${row.cores}核 CPU`);
+  if (configFields.value.ram && row.memoryTotalText) parts.push(`${row.memoryTotalText} 内存`);
+  if (configFields.value.disk && row.diskTotalText) parts.push(`${row.diskTotalText} 硬盘`);
+  if (configFields.value.traffic && row.trafficLimitText) parts.push(`${row.trafficLimitText}/月 流量`);
+  return parts.join(" · ");
+}
+
 /** 可编辑行：节点数据 + 手动修正（币种、溢价模式也支持修正）。 */
 const rowByUuid = computed(() => {
   const map = new Map();
@@ -80,11 +119,17 @@ const rowByUuid = computed(() => {
       price: Number(o.price ?? (node.price > 0 ? node.price : 0)) || 0,
       cycle: Number(o.cycle ?? (Number(node.billingCycle) || 0)),
       expiry: String(o.expiry ?? (node.expiredAt ? String(node.expiredAt).slice(0, 10) : "")),
-      market: Number(o.market ?? 0) || 0,
+      // 市价/溢价保留原始字符串，避免输入负号、小数点等中间态被数字归一化清除。
+      market: o.market === null || o.market === undefined || o.market === "" ? 0 : o.market,
       // 溢价模式默认「直接填溢价」（总价 = 剩余价值 + 溢价）。
       premiumMode: o.mode === "market" ? "market" : "premium",
-      manualPremium: o.premium === null || o.premium === undefined || o.premium === "" ? null : Number(o.premium),
+      manualPremium: o.premium === null || o.premium === undefined || o.premium === "" ? null : o.premium,
       currencyLocked: !o.currency && !(String(node.currency || "").trim()),
+      // 服务器配置（复制/图片可选用）
+      cores: node.cores || 0,
+      memoryTotalText: node.memoryTotalText || "",
+      diskTotalText: node.diskTotalText || "",
+      trafficLimitText: node.trafficLimitText || "",
     });
   }
   return map;
@@ -175,13 +220,15 @@ function setPremiumMode(row, mode) {
   patchOverride(row.uuid, { mode });
 }
 
+/** 溢价输入：保留原始字符（负号、小数点等中间态不归一化），计算时再转数字。 */
 function onPremiumInput(row, event) {
-  const raw = event.target.value;
-  patchOverride(row.uuid, { premium: raw === "" ? null : Number(raw) || 0 });
+  const raw = event.target.value.trim();
+  patchOverride(row.uuid, { premium: raw === "" ? null : raw });
 }
 
 function onMarketInput(row, event) {
-  patchOverride(row.uuid, { market: Math.max(0, Number(event.target.value) || 0) });
+  const raw = event.target.value.trim();
+  patchOverride(row.uuid, { market: raw === "" ? 0 : raw });
 }
 
 /** 溢价金额：带正负号的统一展示（原币种或 CNY）。 */
@@ -212,7 +259,7 @@ function meta() {
 }
 
 async function copyCard(view) {
-  const item = view.item;
+  const item = { ...view.item, configLine: buildConfigLine(view.row) };
   const summary = summarizeValues([item], rates.value ? { ...rates.value, aliases } : null, now.value);
   const text = buildTextReport([item], summary, { ...meta(), rateLines: currencyRateText(view.row.currency) ? [currencyRateText(view.row.currency)] : [] });
   const html = buildHtmlReport([item], summary, { ...meta(), rateLines: currencyRateText(view.row.currency) ? [currencyRateText(view.row.currency)] : [] });
@@ -235,7 +282,7 @@ async function copyCard(view) {
 async function imageCard(view) {
   busyCard.value = String(view.card.id);
   try {
-    const item = view.item;
+    const item = { ...view.item, configLine: buildConfigLine(view.row) };
     const summary = summarizeValues([item], rates.value ? { ...rates.value, aliases } : null, now.value);
     const blob = await renderValueImage([item], summary, meta());
     const url = URL.createObjectURL(blob);
@@ -299,6 +346,13 @@ onBeforeUnmount(() => {
           <button class="value-close" aria-label="关闭" @click="emit('close')"><X :size="18" /></button>
         </div>
       </header>
+
+      <div class="calc-config-bar">
+        <span class="calc-config-label">⚙️ 复制 / 图片附带服务器配置：</span>
+        <label v-for="option in CONFIG_FIELDS" :key="option.key" class="calc-config-check">
+          <input type="checkbox" :checked="configFields[option.key]" @change="toggleConfigField(option.key)" />{{ option.label }}
+        </label>
+      </div>
 
       <div class="calc-grid" :class="{ 'is-multi': cardsView.length > 1 }">
         <section v-for="view in cardsView" :key="view.card.id" class="calc-card" :class="{ 'is-expired': view.item.expired }">
@@ -367,24 +421,25 @@ onBeforeUnmount(() => {
                   <input
                     v-if="view.row.premiumMode === 'premium'"
                     class="value-input"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
                     placeholder="正数=加价，负数=折价"
                     :value="view.row.manualPremium ?? ''"
-                    @change="onPremiumInput(view.row, $event)"
+                    @input="onPremiumInput(view.row, $event)"
                   />
                   <input
                     v-else
                     class="value-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
                     placeholder="可选 · 用于倒算溢价"
                     :value="view.row.market || ''"
-                    @change="onMarketInput(view.row, $event)"
+                    @input="onMarketInput(view.row, $event)"
                   />
-                  <small v-if="view.row.premiumMode === 'premium' && view.row.market > 0" class="calc-hint">
-                    已填参考市价 {{ money(view.row.currency, view.row.market) }}，切到「按市价」可继续沿用
+                  <small v-if="view.row.premiumMode === 'premium' && Number(view.row.market) > 0" class="calc-hint">
+                    已填参考市价 {{ money(view.row.currency, Number(view.row.market)) }}，切到「按市价」可继续沿用
                   </small>
                   <small v-else-if="view.row.premiumMode === 'premium'" class="calc-hint is-muted">总价 = 剩余价值 + 溢价</small>
                   <small v-else class="calc-hint is-muted">溢价 = 参考市价 − 剩余价值</small>

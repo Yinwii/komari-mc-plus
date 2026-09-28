@@ -11,7 +11,8 @@ import { Building2, ChevronDown, Clock, Globe, MapPin, Monitor, Network, X } fro
 
 const STORE_KEY = "komari-visitor-card-v1";
 // mode: "open" 展开 | "mini" 收纳贴边；"closed-today" 按天隐藏
-const state = ref(null);
+// 必须 setup 阶段同步初始化：mode 计算属性在首次渲染就会读取，初始为 null 会白屏。
+const state = ref(readState());
 const info = ref(null);
 const infoFailed = ref(false);
 
@@ -136,7 +137,6 @@ async function fetchVisitorInfo(signal) {
 let abortController = null;
 
 onMounted(() => {
-  state.value = readState();
   const ua = navigator.userAgent || "";
   info.value = {
     os: parseOS(ua),

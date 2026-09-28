@@ -126,7 +126,8 @@ export async function renderValueImage(items, summary, meta = {}) {
     ctx.fillText(name, padding, centerY - 8);
     ctx.font = `400 11px ${FONT}`;
     ctx.fillStyle = "#5b6b8c";
-    ctx.fillText([item.group, expired ? "已过期" : null].filter(Boolean).join(" · "), padding, centerY + 12);
+    const configText = [item.configLine, item.group, expired ? "已过期" : null].filter(Boolean).join(" · ");
+    ctx.fillText(configText.length > 46 ? `${configText.slice(0, 45)}…` : configText, padding, centerY + 12);
 
     ctx.font = `400 13px ${FONT}`;
     ctx.textAlign = "right";

@@ -61,12 +61,51 @@
 
 .calc-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 
+/* 复制/图片附带配置的勾选栏 */
+.calc-config-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 24px 10px;
+  padding: 7px 12px;
+  border: 1px solid #e3eaf3;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 12px;
+  color: #64717d;
+}
+.calc-config-label { font-weight: 600; }
+.calc-config-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #3d4757;
+  cursor: pointer;
+  user-select: none;
+}
+.calc-config-check input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #1f7a4d;
+  cursor: pointer;
+}
+
 .calc-form { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
 .calc-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .calc-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.calc-field > span { font-size: 11.5px; font-weight: 600; color: #64717d; }
+/* 标题行固定高度，保证同一行里左右两个字段（如 到期日期 / 溢价）的输入框顶部对齐 */
+.calc-field > span {
+  display: flex;
+  align-items: center;
+  min-height: 22px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64717d;
+}
 .calc-field .value-input { width: 100%; }
 
 /* 溢价模式切换：填溢价（默认）/ 按市价 */
@@ -76,18 +115,25 @@
   justify-content: space-between;
   gap: 6px;
   flex-wrap: wrap;
+  min-height: 22px;
+}
+
+.calc-field-head > span:first-child {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64717d;
 }
 
 .calc-mode-switch {
   display: inline-flex;
-  padding: 2px;
+  padding: 1px;
   border: 1px solid #e2e7ee;
   border-radius: 8px;
   background: #f5f8fb;
 }
 
 .calc-mode-switch button {
-  padding: 2px 8px;
+  padding: 1px 8px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -212,6 +258,9 @@
 }
 .monitor-app.is-dark .calc-server:focus { border-color: #5a7ca8; box-shadow: 0 0 0 3px rgba(90, 130, 190, 0.2); }
 .monitor-app.is-dark .calc-field > span { color: #8d99ad; }
+.monitor-app.is-dark .calc-field-head > span:first-child { color: #8d99ad; }
+.monitor-app.is-dark .calc-config-bar { border-color: #334054; background: #1f2734; color: #8d99ad; }
+.monitor-app.is-dark .calc-config-check { color: #cfd8e6; }
 .monitor-app.is-dark .calc-mode-switch { border-color: #3a465c; background: #232c3b; }
 .monitor-app.is-dark .calc-mode-switch button { color: #8d99ad; }
 .monitor-app.is-dark .calc-mode-switch button:hover { color: #cfd8e6; }

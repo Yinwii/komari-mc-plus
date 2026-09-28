@@ -245,6 +245,7 @@ export function buildTextReport(items, summary, meta = {}) {
     const value = buildValueLines(item, meta.rates);
     lines.push("");
     lines.push(`### 🖥 ${item.name}`);
+    if (item.configLine) lines.push(`- ⚙️ 服务器配置：${item.configLine}`);
     lines.push(`- 💰 续费价格：${value.priceLine}`);
     lines.push(`- ⏳ 剩余天数：${value.remainingLine}`);
     lines.push(`- 💎 剩余价值：${value.valueLine}`);
@@ -272,6 +273,7 @@ export function buildHtmlReport(items, summary, meta = {}) {
       `<div style="margin:0 0 12px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">`,
       `<div style="font-weight:600;margin-bottom:6px">🖥 ${esc(item.name)}${item.group ? ` <span style="color:#94a3b8;font-weight:400;font-size:12px">${esc(item.group)}</span>` : ""}</div>`,
       `<div style="font-size:13px;line-height:1.9">`,
+      item.configLine ? `⚙️ 服务器配置：${esc(item.configLine)}<br/>` : "",
       `💰 续费价格：${esc(value.priceLine)}<br/>`,
       `⏳ 剩余天数：${esc(value.remainingLine)}<br/>`,
       `💎 剩余价值：<b style="color:#12855c">${esc(value.valueLine)}</b><br/>`,
