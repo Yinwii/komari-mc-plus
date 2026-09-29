@@ -2,7 +2,7 @@
   "name": "Komari MC Plus",
   "short": "komari-mc-plus",
   "description": "支持浅色、深色与 Minecraft 外观的监控面板",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Yinwii",
   "preview": "dist/preview.png",
   "url": "https://github.com/Yinwii/komari-mc-plus",
