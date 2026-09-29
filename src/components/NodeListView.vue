@@ -71,9 +71,11 @@ function usageTone(percent) {
         >
           <td class="nt-center"><i class="node-status-dot" :class="getNodeStatus(node.status)" :title="getNodeStatusLabel(node.status)" /></td>
           <td class="nt-name">
-            <FlagIcon class="nt-flag" :code="node.region || node.group" :label="node.region || node.group" />
-            <SystemIcon :system="node.os" />
-            <span class="nt-name-text" :title="node.name">{{ node.name }}</span>
+            <span class="nt-name-inner">
+              <FlagIcon class="nt-flag" :code="node.region || node.group" :label="node.region || node.group" />
+              <SystemIcon :system="node.os" />
+              <span class="nt-name-text" :title="node.name">{{ node.name }}</span>
+            </span>
           </td>
           <td class="nt-metric">
             <span class="nt-usage"><i :class="usageTone(node.cpu)" :style="{ width: `${Math.min(100, Number(node.cpu) || 0)}%` }" /></span>

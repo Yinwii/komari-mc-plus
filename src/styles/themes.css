@@ -347,6 +347,8 @@
   .hero-status.warning,
   .hero-status.unknown { color: #f2ce7d; }
   .hero-status small { color: #e0e7dc; }
+  .node-table .node-status-dot { border-color:#0c1214; box-shadow:0 0 0 3px #74b75733; }
+  .node-table .node-status-dot.offline { box-shadow:0 0 0 3px #d84d4633; }
 }
 
 .monitor-app.is-dark .overview-regions { border-top-color: rgba(150,180,220,0.14); }

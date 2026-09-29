@@ -53,7 +53,13 @@
 .nt-metric { min-width: 90px; }
 .nt-right { text-align: right; }
 
+/* 注意：flex 不能直接放在 td 上——td 脱离 table-cell 后边框只画在内容高度处，
+   导致节点列下横线与左右列错位；flex 必须放在内层 .nt-name-inner 上。 */
 .nt-name {
+  vertical-align: middle;
+}
+
+.nt-name-inner {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -211,4 +217,26 @@
   .node-table-wrap {
     border-radius: 12px;
   }
+}
+
+/* 状态列：<i> 在 td 内是行内元素，宽高不生效导致点塌缩错位且看不清，必须显式块化 */
+.node-table .node-status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  vertical-align: middle;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(47, 158, 101, 0.3);
+}
+
+.node-table .node-status-dot.offline {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.26);
+}
+
+.node-table .node-status-dot.warning {
+  box-shadow: 0 0 0 3px rgba(211, 148, 36, 0.32);
+}
+
+.node-table .node-status-dot.unknown {
+  box-shadow: 0 0 0 3px rgba(233, 162, 59, 0.3);
 }
