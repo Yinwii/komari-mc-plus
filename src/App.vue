@@ -12,9 +12,10 @@ import VisitorCard from "./components/VisitorCard.vue";
 import { LayoutGrid, Rows3 } from "lucide-vue-next";
 import { fetchLatestStats, fetchSnapshot, supportsBatchLatestStats, updateNodeRealtime, toNodeModel } from "./services/komariApi.js";
 import { getRpcTransportState, setRpcDemoHandler } from "./services/rpc.js";
-import { calculateAssets, fetchExchangeRates } from "./services/assets.js";
+import { calculateAssets, fetchExchangeRates, summarizeAssets } from "./services/assets.js";
 import { fetchThemeSettings, fetchPublicSiteName, normalizeSettings, resolveAppearance, syncAdminAppearance } from "./services/themeSettings.js";
 import { getRegionCode } from "./utils/region.js";
+import { summarizeLimits } from "./utils/overviewCharts.js";
 import { initWallpaper, loadWallpaperState, setWallpaperEnabled, switchWallpaper as switchBingWallpaper } from "./services/bingWallpaper.js";
 import { formatByteRate } from "./utils/format.js";
 
@@ -437,10 +438,21 @@ function getOverviewFromNodes(items) {
   const uploadRate = formatByteRate(speedUp, "B/s");
   const downloadRate = formatByteRate(speedDown, "B/s");
   const totalRate = formatByteRate(speedUp + speedDown, "B/s");
+  const assetsSummary = summarizeAssets(items, rates.value);
+  const limits = summarizeLimits(items);
   return {
     online: { current: online, total: items.length, rate: items.length ? percentText((online / items.length) * 100) : "0%" },
-    assets: calculateAssets(items, rates.value),
-    traffic: { today: toGb(trafficUp + trafficDown), unit: "GB", upload: `${toGb(trafficUp)} GB`, download: `${toGb(trafficDown)} GB` },
+    assets: { ...calculateAssets(items, rates.value), ...assetsSummary },
+    traffic: {
+      today: toGb(trafficUp + trafficDown),
+      unit: "GB",
+      upload: `${toGb(trafficUp)} GB`,
+      download: `${toGb(trafficDown)} GB`,
+      upBytes: trafficUp,
+      downBytes: trafficDown,
+      limitBytes: limits.limitBytes,
+      limitConfigured: limits.configured,
+    },
     bandwidth: {
       value: totalRate.value,
       unit: totalRate.unit,

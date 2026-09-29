@@ -343,3 +343,285 @@
   font-style: normal;
   font-weight: 600;
 }
+
+/* 剩余价值卡 / 累计流量卡：底部图例（留存比例条、到期时间线、账期分布柱、上下行构成、24h 趋势、限额用量环） */
+.overview-card.has-chart .overview-label {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.overview-chart-btn {
+  padding: 2px 8px;
+  font-size: 10px;
+}
+
+.overview-chart {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #e6e6e8;
+}
+
+.overview-chart .chart-hint {
+  display: block;
+  margin-top: 6px;
+  color: #9aa0a8;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.overview-chart .chart-hint b {
+  font-weight: 600;
+}
+
+.overview-chart .chart-placeholder {
+  display: block;
+  color: #9aa0a8;
+  font-size: 10.5px;
+  line-height: 30px;
+  text-align: center;
+}
+
+/* 留存比例条 / 上下行构成条 */
+.overview-share {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.overview-share .share-track {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: #f0f0f2;
+  overflow: hidden;
+}
+
+.overview-share .share-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #17a05e, #4cc38a);
+  transition: width 0.4s ease;
+}
+
+.overview-share em {
+  flex: 0 0 auto;
+  min-width: 34px;
+  color: #4d5259;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.overview-share .split-track {
+  display: flex;
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: #f0f0f2;
+  overflow: hidden;
+}
+
+.overview-share .split-track i {
+  display: block;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.overview-share .split-down { background: #3467bd; }
+.overview-share .split-up { background: #0f9f72; }
+
+/* 到期时间线 */
+.expiry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.expiry-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expiry-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #626872;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.expiry-track {
+  flex: 0 0 58px;
+  height: 6px;
+  border-radius: 3px;
+  background: #f0f0f2;
+  overflow: hidden;
+}
+
+.expiry-track i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #17a05e;
+  transition: width 0.4s ease;
+}
+
+.expiry-track i.is-warning { background: #d39424; }
+.expiry-track i.is-danger { background: #d4574e; }
+
+.expiry-list em {
+  flex: 0 0 36px;
+  color: #686d75;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.expiry-list em.is-warning { color: #b47b16; }
+.expiry-list em.is-danger { color: #c4453c; }
+
+/* 账期分布柱 */
+.cycle-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 48px;
+}
+
+.cycle-bar {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  height: 100%;
+}
+
+.cycle-bar .bar-track {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 22px;
+  border-radius: 3px 3px 0 0;
+  background: #f4f4f6;
+  overflow: hidden;
+}
+
+.cycle-bar .bar-track i {
+  display: block;
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: #17a05e;
+  transition: height 0.4s ease;
+}
+
+.cycle-bar .bar-track i.is-warning { background: #d39424; }
+.cycle-bar .bar-track i.is-danger { background: #d4574e; }
+
+.cycle-bar em {
+  color: #4d5259;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cycle-bar small {
+  color: #9aa0a8;
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 24 小时流量趋势：与实时速率卡同款双线面积图 */
+.traffic-spark {
+  display: block;
+  width: 100%;
+  height: 34px;
+}
+
+/* 限额用量环 */
+.usage-ring {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.usage-ring svg {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  transform: rotate(-90deg);
+}
+
+.usage-ring circle {
+  fill: none;
+  stroke-width: 5;
+}
+
+.usage-ring .ring-track { stroke: #f0f0f2; }
+
+.usage-ring .ring-fill {
+  stroke: #17a05e;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+.usage-ring .ring-fill.is-warning { stroke: #d39424; }
+.usage-ring .ring-fill.is-danger { stroke: #d4574e; }
+
+.usage-ring .ring-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.usage-ring .ring-text b {
+  color: #17a05e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.usage-ring .ring-text b.is-warning { color: #b47b16; }
+.usage-ring .ring-text b.is-danger { color: #c4453c; }
+
+.usage-ring .ring-text small {
+  overflow: hidden;
+  color: #777c84;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.monitor-app.is-dark .overview-chart { border-top-color: rgba(150, 180, 220, 0.16); }
+
+.monitor-app.is-dark .overview-chart .chart-hint,
+.monitor-app.is-dark .overview-chart .chart-placeholder,
+.monitor-app.is-dark .cycle-bar small { color: #7c8799; }
+
+.monitor-app.is-dark .overview-share .share-track,
+.monitor-app.is-dark .overview-share .split-track,
+.monitor-app.is-dark .expiry-track,
+.monitor-app.is-dark .cycle-bar .bar-track { background: rgba(150, 180, 220, 0.14); }
+
+.monitor-app.is-dark .overview-share em,
+.monitor-app.is-dark .expiry-name,
+.monitor-app.is-dark .cycle-bar em { color: #b6c0cf; }
+
+.monitor-app.is-dark .expiry-list em { color: #aab5c4; }
+.monitor-app.is-dark .expiry-list em.is-warning { color: #e2a93b; }
+.monitor-app.is-dark .expiry-list em.is-danger { color: #e8756b; }
+
+.monitor-app.is-dark .usage-ring .ring-track { stroke: rgba(150, 180, 220, 0.14); }
+.monitor-app.is-dark .usage-ring .ring-text small { color: #93a0b2; }

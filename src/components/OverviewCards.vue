@@ -1,8 +1,11 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import FlagIcon from "./FlagIcon.vue";
 import { getRegionCode, getRegionDisplayName } from "../utils/region.js";
+import { formatBytes } from "../utils/format.js";
+import { fetchNodeHistory } from "../services/nodeHistory.js";
+import { buildCycleBuckets, buildExpiryTimeline, buildHourlyTraffic, summarizeLimits, trafficShare } from "../utils/overviewCharts.js";
 
 const props = defineProps({
   overview: { type: Object, required: true },
@@ -147,6 +150,177 @@ const mapDots = computed(() => {
   });
   return dots;
 });
+
+// ── 剩余价值卡 / 累计流量卡底部图例 ────────────────────────────────
+// 与在线卡的地区展示同一套交互：后台给总开关与默认样式，访客用卡片内按钮循环切换并本地记忆。
+const ASSETS_CHART_MODES = ["留存比例条", "到期时间线", "账期分布柱"];
+const TRAFFIC_CHART_MODES = ["上下行构成", "24h 流量趋势", "限额用量环"];
+const ASSETS_CHART_KEY = "komari-assets-chart-v1";
+const TRAFFIC_CHART_KEY = "komari-traffic-chart-v1";
+// 卡片内按钮用短名，避免在窄卡片里换行。
+const CHART_LABELS = {
+  留存比例条: "留存条",
+  到期时间线: "到期线",
+  账期分布柱: "账期柱",
+  上下行构成: "构成条",
+  "24h 流量趋势": "24h 趋势",
+  限额用量环: "用量环",
+};
+
+function readChartOverride(key, modes) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "null");
+    return value === "" || modes.includes(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveChartOverride(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* 隐私模式等场景下静默跳过 */
+  }
+}
+
+const assetsChartOverride = ref(readChartOverride(ASSETS_CHART_KEY, ASSETS_CHART_MODES));
+const trafficChartOverride = ref(readChartOverride(TRAFFIC_CHART_KEY, TRAFFIC_CHART_MODES));
+
+// 后台开关：关闭后整块图例（含卡片内切换按钮）都不展示。
+const assetsChartEnabled = computed(() => props.settings.assetsChartEnabled !== false);
+const trafficChartEnabled = computed(() => props.settings.trafficChartEnabled !== false);
+
+function resolveChartMode(override, fallback, modes) {
+  if (override !== null) return override;
+  return modes.includes(fallback) ? fallback : "";
+}
+
+const assetsChartMode = computed(() => resolveChartMode(assetsChartOverride.value, props.settings.assetsChartStyle, ASSETS_CHART_MODES));
+const trafficChartMode = computed(() => resolveChartMode(trafficChartOverride.value, props.settings.trafficChartStyle, TRAFFIC_CHART_MODES));
+
+function chartLabel(mode) {
+  return mode ? `${CHART_LABELS[mode]} ⇄` : "＋图例 ⇄";
+}
+
+function chartButtonTitle(mode) {
+  return mode ? `切换卡片图例样式（当前：${mode}）` : "卡片图例已关闭，点击选择展示样式";
+}
+
+function cycleChart(overrideRef, current, modes, key) {
+  const cycle = ["", ...modes];
+  const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+  overrideRef.value = next;
+  saveChartOverride(key, next);
+}
+
+function cycleAssetsChart() {
+  cycleChart(assetsChartOverride, assetsChartMode.value, ASSETS_CHART_MODES, ASSETS_CHART_KEY);
+}
+
+function cycleTrafficChart() {
+  cycleChart(trafficChartOverride, trafficChartMode.value, TRAFFIC_CHART_MODES, TRAFFIC_CHART_KEY);
+}
+
+// 剩余价值：比例条 / 到期时间线 / 账期分布柱
+const assetsDetail = computed(() => props.overview?.assets || {});
+const assetsSharePercent = computed(() => Math.round((Number(assetsDetail.value.ratio) || 0) * 100));
+const assetsShareHint = computed(() => {
+  const detail = assetsDetail.value;
+  if (detail.complete === false) return detail.forecast || "部分节点缺少汇率或计费信息";
+  const total = Number(detail.total) || 0;
+  if (!total) return "暂无计费中的节点";
+  return `剩余 CNY ${(Number(detail.remaining) || 0).toFixed(2)} / 总价值 CNY ${total.toFixed(2)}`;
+});
+
+const expiryTimeline = computed(() => buildExpiryTimeline(props.nodes, Date.now(), 5));
+const cycleBuckets = computed(() => buildCycleBuckets(props.nodes, Date.now()));
+
+// 累计流量：上下行构成 / 24h 趋势 / 限额用量环
+const trafficDetail = computed(() => props.overview?.traffic || {});
+const trafficSplit = computed(() => trafficShare(trafficDetail.value.upBytes, trafficDetail.value.downBytes));
+const trafficSplitTitle = computed(() => (trafficSplit.value.empty
+  ? "暂无累计流量"
+  : `下行 ${formatBytes(trafficSplit.value.down)} · 上行 ${formatBytes(trafficSplit.value.up)}`));
+
+const limitSummary = computed(() => summarizeLimits(props.nodes));
+const LIMIT_RING_CIRCUMFERENCE = 2 * Math.PI * 18;
+const limitRingOffset = computed(() => LIMIT_RING_CIRCUMFERENCE * (1 - limitSummary.value.ratio));
+
+const TRAFFIC_HISTORY_HOURS = 24;
+const TRAFFIC_HISTORY_CONCURRENCY = 4;
+const TRAFFIC_HISTORY_MAX_NODES = 40;
+const trafficHistory = ref({ points: [], totalDown: 0, totalUp: 0, hasData: false });
+const trafficHistoryLoading = ref(false);
+let trafficAbort = null;
+let trafficRequestId = 0;
+
+const trafficSparkPoints = computed(() => {
+  const { hasData, points } = trafficHistory.value;
+  if (!hasData || points.length < 2) return null;
+  const max = Math.max(...points.map((point) => Math.max(point.down, point.up)), 1);
+  const step = SPARK_W / (points.length - 1);
+  const build = (key) => {
+    const coords = points.map((point, index) => [index * step, SPARK_H - 2 - (point[key] / max) * (SPARK_H - 5)]);
+    const line = coords.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+    return { line, area: `${line} L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z` };
+  };
+  return { down: build("down"), up: build("up") };
+});
+
+/** 24 小时趋势需要逐节点拉历史记录，因此只在选中该样式时加载，并按节点 uuid 集合变化触发。 */
+async function syncTrafficHistory() {
+  const uuids = props.nodes.map((node) => node.uuid).filter(Boolean).slice(0, TRAFFIC_HISTORY_MAX_NODES);
+  trafficAbort?.abort();
+  trafficAbort = null;
+  if (trafficChartMode.value !== "24h 流量趋势" || !uuids.length) {
+    trafficRequestId += 1;
+    trafficHistory.value = { points: [], totalDown: 0, totalUp: 0, hasData: false };
+    trafficHistoryLoading.value = false;
+    return;
+  }
+  const controller = new AbortController();
+  trafficAbort = controller;
+  const requestId = ++trafficRequestId;
+  trafficHistoryLoading.value = true;
+
+  const recordSets = [];
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < uuids.length && !controller.signal.aborted) {
+      const uuid = uuids[cursor];
+      cursor += 1;
+      try {
+        recordSets.push(await fetchNodeHistory(uuid, TRAFFIC_HISTORY_HOURS, controller.signal));
+      } catch (error) {
+        // 单个节点失败不影响整体趋势；历史服务自带 5 分钟缓存，重复切换样式不会重复请求。
+        if (error?.name === "AbortError") return;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(TRAFFIC_HISTORY_CONCURRENCY, uuids.length) }, worker));
+  if (controller.signal.aborted || requestId !== trafficRequestId) return;
+  trafficHistory.value = buildHourlyTraffic(recordSets, Date.now(), TRAFFIC_HISTORY_HOURS);
+  trafficHistoryLoading.value = false;
+}
+
+onMounted(() => {
+  void syncTrafficHistory();
+});
+
+onBeforeUnmount(() => {
+  trafficAbort?.abort();
+});
+
+// 样式切换立即重新加载；节点增删时也刷新（实时刷新不会改变 uuid 集合，因此不会反复拉历史）。
+watch(trafficChartMode, () => {
+  void syncTrafficHistory();
+});
+
+watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousValue) => {
+  if (previousValue === undefined) return;
+  void syncTrafficHistory();
+});
 </script>
 
 <template>
@@ -191,25 +365,129 @@ const mapDots = computed(() => {
       </div>
       <span class="overview-icon"><AppIcon name="server" :size="22" /></span>
     </div>
-    <div v-if="settings.showAssets" class="overview-card">
+    <div v-if="settings.showAssets" class="overview-card" :class="{ 'has-chart': assetsChartEnabled && assetsChartMode }">
       <div class="overview-label">
         剩余价值
+        <button
+          v-if="assetsChartEnabled"
+          class="overview-calc-btn overview-chart-btn"
+          type="button"
+          :title="chartButtonTitle(assetsChartMode)"
+          @click="cycleAssetsChart"
+        >{{ chartLabel(assetsChartMode) }}</button>
         <button class="overview-calc-btn" type="button" title="打开剩余价值计算器（多卡对比 / 手动修正）" @click="$emit('open-calc')">🧮 计算器</button>
       </div>
-      <div class="overview-value">{{ overview.assets.value }}</div>
-      <p>{{ overview.assets.forecast }}</p>
+      <div class="overview-value">{{ overview.assets?.value }}</div>
+      <p>{{ overview.assets?.forecast }}</p>
+      <div v-if="assetsChartMode" class="overview-chart">
+        <template v-if="assetsChartMode === '留存比例条'">
+          <div class="overview-share" :title="assetsShareHint">
+            <span class="share-track"><span class="share-fill" :style="{ width: `${assetsSharePercent}%` }" /></span>
+            <em>{{ assetsSharePercent }}%</em>
+          </div>
+          <small class="chart-hint">{{ assetsShareHint }}</small>
+        </template>
+        <template v-else-if="assetsChartMode === '到期时间线'">
+          <ul v-if="expiryTimeline.items.length" class="expiry-list">
+            <li v-for="item in expiryTimeline.items" :key="item.uuid" :title="item.title">
+              <span class="expiry-name">{{ item.name }}</span>
+              <span class="expiry-track"><i :class="`is-${item.level}`" :style="{ width: `${Math.max(8, item.ratio * 100)}%` }" /></span>
+              <em :class="`is-${item.level}`">{{ item.days }}天</em>
+            </li>
+          </ul>
+          <small v-else class="chart-hint">暂无可计算的到期信息</small>
+          <small v-if="expiryTimeline.overflow" class="chart-hint">另有 {{ expiryTimeline.overflow }} 台到期节点未显示</small>
+        </template>
+        <template v-else>
+          <div class="cycle-bars">
+            <span v-for="bucket in cycleBuckets" :key="bucket.label" class="cycle-bar" :title="bucket.title">
+              <span class="bar-track"><i :class="`is-${bucket.level}`" :style="{ height: `${bucket.height}%` }" /></span>
+              <em>{{ bucket.count }}</em>
+              <small>{{ bucket.label }}</small>
+            </span>
+          </div>
+        </template>
+      </div>
       <span class="overview-icon"><AppIcon name="wallet" :size="22" /></span>
     </div>
-    <div v-if="settings.showTraffic" class="overview-card">
-      <div class="overview-label">累计流量</div>
+    <div v-if="settings.showTraffic" class="overview-card" :class="{ 'has-chart': trafficChartEnabled && trafficChartMode }">
+      <div class="overview-label">
+        累计流量
+        <button
+          v-if="trafficChartEnabled"
+          class="overview-calc-btn overview-chart-btn"
+          type="button"
+          :title="chartButtonTitle(trafficChartMode)"
+          @click="cycleTrafficChart"
+        >{{ chartLabel(trafficChartMode) }}</button>
+      </div>
       <div class="overview-value">
-        {{ overview.traffic.today }}<small>{{ overview.traffic.unit }}</small>
+        {{ overview.traffic?.today }}<small>{{ overview.traffic?.unit }}</small>
       </div>
       <p class="traffic-summary">
-        <span class="traffic-upload"><AppIcon name="upload" /> {{ overview.traffic.upload }}</span>
+        <span class="traffic-upload"><AppIcon name="upload" /> {{ overview.traffic?.upload }}</span>
         ·
-        <span class="traffic-download"><AppIcon name="download" /> {{ overview.traffic.download }}</span>
+        <span class="traffic-download"><AppIcon name="download" /> {{ overview.traffic?.download }}</span>
       </p>
+      <div v-if="trafficChartMode" class="overview-chart">
+        <template v-if="trafficChartMode === '上下行构成'">
+          <div class="overview-share is-split" :title="trafficSplitTitle">
+            <span class="split-track">
+              <i class="split-down" :style="{ width: `${trafficSplit.downPercent}%` }" />
+              <i class="split-up" :style="{ width: `${trafficSplit.upPercent}%` }" />
+            </span>
+          </div>
+          <small class="chart-hint">
+            <b class="traffic-download">↓ {{ trafficSplit.downPercent }}%</b>
+            ·
+            <b class="traffic-upload">↑ {{ trafficSplit.upPercent }}%</b>
+            <template v-if="trafficSplit.empty"> · 暂无流量</template>
+          </small>
+        </template>
+        <template v-else-if="trafficChartMode === '24h 流量趋势'">
+          <svg v-if="trafficSparkPoints" class="traffic-spark" :viewBox="`0 0 ${SPARK_W} ${SPARK_H}`" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="traffic-spark-down" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#3467bd" stop-opacity="0.32" />
+                <stop offset="100%" stop-color="#3467bd" stop-opacity="0.02" />
+              </linearGradient>
+              <linearGradient id="traffic-spark-up" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0f9f72" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="#0f9f72" stop-opacity="0.02" />
+              </linearGradient>
+            </defs>
+            <path :d="trafficSparkPoints.down.area" fill="url(#traffic-spark-down)" />
+            <path :d="trafficSparkPoints.down.line" fill="none" stroke="#3467bd" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+            <path :d="trafficSparkPoints.up.area" fill="url(#traffic-spark-up)" />
+            <path :d="trafficSparkPoints.up.line" fill="none" stroke="#0f9f72" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+          </svg>
+          <span v-else class="chart-placeholder">{{ trafficHistoryLoading ? "正在加载 24 小时流量…" : "暂无历史流量数据" }}</span>
+          <small v-if="trafficSparkPoints" class="chart-hint">
+            24 小时 <b class="traffic-download">↓ {{ formatBytes(trafficHistory.totalDown) }}</b> · <b class="traffic-upload">↑ {{ formatBytes(trafficHistory.totalUp) }}</b>
+          </small>
+        </template>
+        <template v-else>
+          <div v-if="limitSummary.configured" class="usage-ring" :title="`已用 / 限额，统计 ${limitSummary.configured} 个已设限额节点`">
+            <svg viewBox="0 0 44 44" aria-hidden="true">
+              <circle class="ring-track" cx="22" cy="22" r="18" />
+              <circle
+                class="ring-fill"
+                :class="`is-${limitSummary.level}`"
+                cx="22"
+                cy="22"
+                r="18"
+                :stroke-dasharray="LIMIT_RING_CIRCUMFERENCE.toFixed(2)"
+                :stroke-dashoffset="limitRingOffset.toFixed(2)"
+              />
+            </svg>
+            <span class="ring-text">
+              <b :class="`is-${limitSummary.level}`">{{ limitSummary.percent }}%</b>
+              <small>已用 {{ formatBytes(limitSummary.usedBytes) }} / {{ formatBytes(limitSummary.limitBytes) }}</small>
+            </span>
+          </div>
+          <span v-else class="chart-placeholder">节点未设置流量限额</span>
+        </template>
+      </div>
       <span class="overview-icon"><AppIcon name="database" :size="22" /></span>
     </div>
     <div v-if="settings.showSpeed" class="overview-card has-spark">

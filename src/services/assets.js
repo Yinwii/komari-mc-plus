@@ -15,6 +15,33 @@ export async function fetchExchangeRates() {
 
 /** @returns {{value: string, forecast: string}} */
 export function calculateAssets(nodes, rates, now = Date.now()) {
+  const summary = computeAssets(nodes, rates, now);
+  const format = (value) => `CNY ${value.toFixed(2)}`;
+  return {
+    value: summary.missing || summary.unknownExpiry ? "暂无完整估值" : format(summary.remaining),
+    forecast: summary.missing
+      ? `${summary.missing} 个节点缺少可用币种或汇率`
+      : `总价值 ${format(summary.total)}${summary.unknownExpiry ? ` · ${summary.unknownExpiry} 个节点计费信息不完整` : ""}`,
+  };
+}
+
+/**
+ * 剩余价值的数值形态，供总览卡的留存比例条使用（文案版本仍走 calculateAssets）。
+ * @returns {{total: number, remaining: number, ratio: number, complete: boolean, missing: number, unknownExpiry: number}}
+ */
+export function summarizeAssets(nodes, rates, now = Date.now()) {
+  const summary = computeAssets(nodes, rates, now);
+  return {
+    total: summary.total,
+    remaining: summary.remaining,
+    ratio: summary.total > 0 ? Math.max(0, Math.min(1, summary.remaining / summary.total)) : 0,
+    complete: !summary.missing && !summary.unknownExpiry,
+    missing: summary.missing,
+    unknownExpiry: summary.unknownExpiry,
+  };
+}
+
+function computeAssets(nodes, rates, now) {
   let total = 0;
   let remaining = 0;
   let missing = 0;
@@ -32,7 +59,5 @@ export function calculateAssets(nodes, rates, now = Date.now()) {
     else if (!Number.isFinite(expiry) || node.billingCycle <= 0) unknownExpiry++;
     else remaining += value * Math.max(0, Math.min(1, (expiry - now) / (node.billingCycle * 86400000)));
   }
-  const format = (value) => `CNY ${value.toFixed(2)}`;
-  return { value: missing || unknownExpiry ? "暂无完整估值" : format(remaining),
-    forecast: missing ? `${missing} 个节点缺少可用币种或汇率` : `总价值 ${format(total)}${unknownExpiry ? ` · ${unknownExpiry} 个节点计费信息不完整` : ""}` };
+  return { total, remaining, missing, unknownExpiry };
 }

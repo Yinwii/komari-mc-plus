@@ -317,6 +317,37 @@
   .view-switch { border-color:#a98451; background:#ead7a8; box-shadow:2px 2px 0 #0b100d99; }
   .view-switch button { color:#6f5237; }
   .view-switch button.active { background:#6e9f45; color:#fff8d9; box-shadow:inset 0 -2px 0 #b6d86b; }
+  .overview-chart { border-top-color:#d1bb8b; }
+  .overview-chart .chart-hint,
+  .overview-chart .chart-placeholder,
+  .cycle-bar small { color:#8a6b4a; }
+  .overview-share .share-track,
+  .overview-share .split-track,
+  .expiry-track,
+  .cycle-bar .bar-track { background:#dfcc98; }
+  .overview-share em,
+  .expiry-name,
+  .cycle-bar em { color:#5b452f; }
+  .overview-share .share-fill,
+  .expiry-track i,
+  .cycle-bar .bar-track i { background:#6e9f45; }
+  .expiry-track i.is-warning,
+  .cycle-bar .bar-track i.is-warning { background:#d9a13c; }
+  .expiry-track i.is-danger,
+  .cycle-bar .bar-track i.is-danger { background:#c15a3c; }
+  .expiry-list em { color:#5b452f; }
+  .expiry-list em.is-warning { color:#a3722a; }
+  .expiry-list em.is-danger { color:#a8462e; }
+  .overview-share .split-down { background:#4a76b5; }
+  .overview-share .split-up { background:#4c8a46; }
+  .usage-ring .ring-track { stroke:#dfcc98; }
+  .usage-ring .ring-fill { stroke:#6e9f45; }
+  .usage-ring .ring-fill.is-warning { stroke:#d9a13c; }
+  .usage-ring .ring-fill.is-danger { stroke:#c15a3c; }
+  .usage-ring .ring-text b { color:#43702e; }
+  .usage-ring .ring-text b.is-warning { color:#a3722a; }
+  .usage-ring .ring-text b.is-danger { color:#a8462e; }
+  .usage-ring .ring-text small { color:#6b5138; }
 
   /* 独立实色底隔开场景图片，确保控件和状态不受云层明暗影响。 */
   .details-hero {

@@ -138,6 +138,14 @@
 .monitor-app.is-dark.has-wallpaper .region-pill { background: rgba(23, 34, 49, 0.55); }
 .monitor-app.is-dark.has-wallpaper .region-rate .rate-track { background: rgba(150, 180, 220, 0.14); }
 
+/* 卡片底部图例的轨道与分隔线跟随玻璃质感，否则实色底会在壁纸上显得突兀 */
+.monitor-app.has-wallpaper:not(.mc-theme) .overview-chart { border-top-color: rgba(255, 255, 255, 0.45); }
+.monitor-app.has-wallpaper:not(.mc-theme) .overview-share .share-track,
+.monitor-app.has-wallpaper:not(.mc-theme) .overview-share .split-track,
+.monitor-app.has-wallpaper:not(.mc-theme) .expiry-track,
+.monitor-app.has-wallpaper:not(.mc-theme) .cycle-bar .bar-track { background: rgba(255, 255, 255, 0.5); }
+.monitor-app.has-wallpaper:not(.mc-theme) .usage-ring .ring-track { stroke: rgba(255, 255, 255, 0.5); }
+
 /* ---- 壁纸模式下小控件玻璃化：计算器/样式切换/视图切换/分组条，与卡片同材质 ---- */
 .monitor-app.has-wallpaper:not(.mc-theme) .overview-calc-btn {
   border-color: rgba(255, 255, 255, 0.55);

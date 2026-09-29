@@ -1,5 +1,16 @@
 const BYTE_UNITS = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
+const BYTE_SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"];
 const LONG_TERM_EXPIRE_DAYS = 36500;
+
+/** 人类可读的字节量（非速率），用于流量图表与额度环的文字。 */
+export function formatBytes(value, decimals) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes <= 0) return `0 ${BYTE_SIZE_UNITS[0]}`;
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), BYTE_SIZE_UNITS.length - 1);
+  const converted = bytes / 1024 ** index;
+  const digits = decimals ?? (index === 0 || converted >= 100 ? 0 : converted >= 10 ? 1 : 2);
+  return `${converted.toFixed(digits)} ${BYTE_SIZE_UNITS[index]}`;
+}
 
 export function formatByteRate(value, unit = "B/s") {
   const bytes = toBytes(value, unit);
