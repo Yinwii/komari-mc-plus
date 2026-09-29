@@ -50,7 +50,10 @@ https://github.com/Yinwii/komari-mc-plus
 
 - 本主题由 `ShumTin/komari-minecraft` 分支而来，自 v1.1.21 起改名为 **Komari MC Plus**（主题标识 `short` = `komari-mc-plus`），
   并作为新版本线从 **v1.0.0** 重新开始计数。
-- tag `v1.1.2` ～ `v1.1.20` 是改名前的旧版本线，仅作历史归档与回退点保留，不再更新。
+- 旧版本线（`short` = `Minecraft`，名称 Komari Minecraft）的最终版本为 **0.0.20**
+  （由原 tag `v1.1.20` 重命名而来，也就是最后的 1.1.x 版本），以 pre-release 形式归档在
+  [Releases](https://github.com/Yinwii/komari-mc-plus/releases/tag/v0.0.20)，仅作历史回退用，不再更新；
+  更早的 tag `v1.1.2` ～ `v1.1.19` 同样仅作历史归档与回退点保留。
 - Komari 的远程更新只取最新 Release 的主题包，不比较版本号，因此版本号重排不影响升级。
   旧版主题（`short` 为 `Minecraft`）需删除后重新导入一次，此后按 `komari-mc-plus` 正常更新。
 
