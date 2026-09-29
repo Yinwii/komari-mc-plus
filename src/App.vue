@@ -206,6 +206,7 @@ function syncRoute() {
 }
 
 function openNode(node) {
+  if (!node?.uuid) return;
   window.history.pushState({}, "", `/instance/${encodeURIComponent(node.uuid)}`);
   selectedNode.value = node;
 }
@@ -494,7 +495,7 @@ function getOverviewFromNodes(items) {
       <p>加载节点...</p>
     </section>
     <main v-else-if="!selectedNode" :aria-busy="isLoading">
-      <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" :nodes="nodes" @open-calc="openCalcCard" />
+      <OverviewCards :overview="overview" :settings="settings" :speed-history="speedHistory" :nodes="nodes" @open-calc="openCalcCard" @select-node="openNode(nodes.find((node) => node.uuid === $event))" />
       <p v-if="settingsError && !isDemoMode" class="data-error" role="alert">{{ settingsError }}</p>
       <p v-if="errorMessage && !isDemoMode" class="data-error" role="alert">{{ errorMessage }}</p>
       <div class="node-filters">

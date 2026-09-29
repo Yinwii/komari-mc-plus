@@ -13,7 +13,7 @@ const props = defineProps({
   speedHistory: { type: Array, default: () => [] },
   nodes: { type: Array, default: () => [] },
 });
-defineEmits(["open-calc"]);
+const emit = defineEmits(["open-calc", "select-node"]);
 
 // 参考 komari-theme-ink：速率卡片底部绘制上行/下行迷你面积走势图。
 const SPARK_W = 100;
@@ -233,7 +233,28 @@ const assetsShareHint = computed(() => {
   return `剩余 CNY ${(Number(detail.remaining) || 0).toFixed(2)} / 总价值 CNY ${total.toFixed(2)}`;
 });
 
-const expiryTimeline = computed(() => buildExpiryTimeline(props.nodes, Date.now(), 5));
+// 到期时间线默认只展示最紧迫的若干台（条数由后台配置），卡片内可展开全部。
+const EXPIRY_DEFAULT_LIMIT = 5;
+const expiryLimit = computed(() => {
+  const raw = String(props.settings.assetsExpiryRows ?? "").trim();
+  if (raw === "全部" || raw === "all" || raw === "0") return Infinity;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : EXPIRY_DEFAULT_LIMIT;
+});
+const expiryExpanded = ref(false);
+const expiryTimeline = computed(() => buildExpiryTimeline(props.nodes, Date.now(), expiryLimit.value));
+const expiryVisible = computed(() => (expiryExpanded.value ? expiryTimeline.value.all : expiryTimeline.value.items));
+const expirySummary = computed(() => {
+  const { total, urgent } = expiryTimeline.value;
+  if (!total) return "";
+  return urgent ? `共 ${total} 台 · 7 天内 ${urgent} 台` : `共 ${total} 台`;
+});
+function toggleExpiryExpand() {
+  expiryExpanded.value = !expiryExpanded.value;
+}
+function selectNode(item) {
+  if (item?.uuid) emit("select-node", item.uuid);
+}
 const cycleBuckets = computed(() => buildCycleBuckets(props.nodes, Date.now()));
 
 // 累计流量：上下行构成 / 24h 趋势 / 限额用量环
@@ -250,8 +271,9 @@ const limitRingOffset = computed(() => LIMIT_RING_CIRCUMFERENCE * (1 - limitSumm
 const TRAFFIC_HISTORY_HOURS = 24;
 const TRAFFIC_HISTORY_CONCURRENCY = 4;
 const TRAFFIC_HISTORY_MAX_NODES = 40;
-const trafficHistory = ref({ points: [], totalDown: 0, totalUp: 0, hasData: false });
+const trafficHistory = ref({ points: [], totalDown: 0, totalUp: 0, hasData: false, source: "none", samples: 0 });
 const trafficHistoryLoading = ref(false);
+const trafficHistoryError = ref("");
 let trafficAbort = null;
 let trafficRequestId = 0;
 
@@ -270,12 +292,13 @@ const trafficSparkPoints = computed(() => {
 
 /** 24 小时趋势需要逐节点拉历史记录，因此只在选中该样式时加载，并按节点 uuid 集合变化触发。 */
 async function syncTrafficHistory() {
-  const uuids = props.nodes.map((node) => node.uuid).filter(Boolean).slice(0, TRAFFIC_HISTORY_MAX_NODES);
+  const uuids = [...new Set(props.nodes.map((node) => node.uuid).filter(Boolean))].slice(0, TRAFFIC_HISTORY_MAX_NODES);
   trafficAbort?.abort();
   trafficAbort = null;
   if (trafficChartMode.value !== "24h 流量趋势" || !uuids.length) {
     trafficRequestId += 1;
-    trafficHistory.value = { points: [], totalDown: 0, totalUp: 0, hasData: false };
+    trafficHistory.value = { points: [], totalDown: 0, totalUp: 0, hasData: false, source: "none", samples: 0 };
+    trafficHistoryError.value = "";
     trafficHistoryLoading.value = false;
     return;
   }
@@ -283,8 +306,11 @@ async function syncTrafficHistory() {
   trafficAbort = controller;
   const requestId = ++trafficRequestId;
   trafficHistoryLoading.value = true;
+  trafficHistoryError.value = "";
 
   const recordSets = [];
+  let failures = 0;
+  let lastError = "";
   let cursor = 0;
   const worker = async () => {
     while (cursor < uuids.length && !controller.signal.aborted) {
@@ -295,13 +321,44 @@ async function syncTrafficHistory() {
       } catch (error) {
         // 单个节点失败不影响整体趋势；历史服务自带 5 分钟缓存，重复切换样式不会重复请求。
         if (error?.name === "AbortError") return;
+        failures += 1;
+        lastError = error instanceof Error ? error.message : String(error);
       }
     }
   };
   await Promise.all(Array.from({ length: Math.min(TRAFFIC_HISTORY_CONCURRENCY, uuids.length) }, worker));
   if (controller.signal.aborted || requestId !== trafficRequestId) return;
-  trafficHistory.value = buildHourlyTraffic(recordSets, Date.now(), TRAFFIC_HISTORY_HOURS);
+
+  let result = buildHourlyTraffic(recordSets, Date.now(), TRAFFIC_HISTORY_HOURS);
+  // 全部请求都失败、或记录里没有任何流量字段时，补一次重试，避免启动瞬间的竞态把图例定死成空。
+  if (!result.hasData && !controller.signal.aborted) {
+    const retrySets = [];
+    const retry = async (uuid) => {
+      try {
+        retrySets.push(await fetchNodeHistory(uuid, TRAFFIC_HISTORY_HOURS));
+      } catch {
+        /* 重试仍失败则按空结果展示 */
+      }
+    };
+    await Promise.all(uuids.slice(0, 8).map(retry));
+    if (controller.signal.aborted || requestId !== trafficRequestId) return;
+    const retried = buildHourlyTraffic(retrySets, Date.now(), TRAFFIC_HISTORY_HOURS);
+    if (retried.hasData) result = retried;
+  }
+
+  trafficHistory.value = result;
+  if (!result.hasData) {
+    trafficHistoryError.value = failures
+      ? `历史数据获取失败（${failures} 个节点）：${lastError || "未知错误"}`
+      : result.samples
+        ? "历史记录中不含流量字段"
+        : "所选节点暂无 24 小时内历史记录";
+  }
   trafficHistoryLoading.value = false;
+}
+
+function retryTrafficHistory() {
+  void syncTrafficHistory();
 }
 
 onMounted(() => {
@@ -388,15 +445,26 @@ watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousVal
           <small class="chart-hint">{{ assetsShareHint }}</small>
         </template>
         <template v-else-if="assetsChartMode === '到期时间线'">
-          <ul v-if="expiryTimeline.items.length" class="expiry-list">
-            <li v-for="item in expiryTimeline.items" :key="item.uuid" :title="item.title">
-              <span class="expiry-name">{{ item.name }}</span>
-              <span class="expiry-track"><i :class="`is-${item.level}`" :style="{ width: `${Math.max(8, item.ratio * 100)}%` }" /></span>
-              <em :class="`is-${item.level}`">{{ item.days }}天</em>
+          <div v-if="expiryTimeline.total" class="expiry-head">
+            <small class="expiry-count">{{ expirySummary }}</small>
+            <button
+              v-if="expiryTimeline.total > expiryTimeline.items.length || expiryExpanded"
+              class="expiry-toggle"
+              type="button"
+              :title="expiryExpanded ? '收起，只看最紧迫的几台' : `展开全部 ${expiryTimeline.total} 台`"
+              @click="toggleExpiryExpand"
+            >{{ expiryExpanded ? "收起" : `展开 +${expiryTimeline.overflow}` }}</button>
+          </div>
+          <ul v-if="expiryVisible.length" class="expiry-list">
+            <li v-for="item in expiryVisible" :key="item.uuid">
+              <button class="expiry-row" type="button" :title="`${item.title} · 点击查看节点详情`" @click="selectNode(item)">
+                <span class="expiry-name">{{ item.name }}</span>
+                <span class="expiry-track"><i :class="`is-${item.level}`" :style="{ width: `${Math.max(8, item.ratio * 100)}%` }" /></span>
+                <em :class="`is-${item.level}`">{{ item.days }}天</em>
+              </button>
             </li>
           </ul>
           <small v-else class="chart-hint">暂无可计算的到期信息</small>
-          <small v-if="expiryTimeline.overflow" class="chart-hint">另有 {{ expiryTimeline.overflow }} 台到期节点未显示</small>
         </template>
         <template v-else>
           <div class="cycle-bars">
@@ -461,7 +529,13 @@ watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousVal
             <path :d="trafficSparkPoints.up.area" fill="url(#traffic-spark-up)" />
             <path :d="trafficSparkPoints.up.line" fill="none" stroke="#0f9f72" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
           </svg>
-          <span v-else class="chart-placeholder">{{ trafficHistoryLoading ? "正在加载 24 小时流量…" : "暂无历史流量数据" }}</span>
+          <span v-else class="chart-placeholder">
+            <template v-if="trafficHistoryLoading">正在加载 24 小时流量…</template>
+            <template v-else>
+              {{ trafficHistoryError || "暂无历史流量数据" }}
+              <button v-if="trafficHistoryError" class="expiry-toggle" type="button" @click="retryTrafficHistory">重试</button>
+            </template>
+          </span>
           <small v-if="trafficSparkPoints" class="chart-hint">
             24 小时 <b class="traffic-download">↓ {{ formatBytes(trafficHistory.totalDown) }}</b> · <b class="traffic-upload">↑ {{ formatBytes(trafficHistory.totalUp) }}</b>
           </small>

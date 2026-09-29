@@ -348,6 +348,11 @@
   .usage-ring .ring-text b.is-warning { color:#a3722a; }
   .usage-ring .ring-text b.is-danger { color:#a8462e; }
   .usage-ring .ring-text small { color:#6b5138; }
+  .expiry-count { color:#8a6b4a; }
+  .expiry-toggle { border-color:#c9ad7c; background:#ead7a8; color:#6f5237; }
+  .expiry-toggle:hover { border-color:#b09257; background:#e0c894; color:#5b452f; }
+  .expiry-row:hover { background:#e9d49f; }
+  .expiry-row:focus-visible { outline-color:#6e9f45; }
 
   /* 独立实色底隔开场景图片，确保控件和状态不受云层明暗影响。 */
   .details-hero {

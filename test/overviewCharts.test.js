@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildCycleBuckets, buildExpiryTimeline, buildHourlyTraffic, summarizeLimits, trafficShare } from "../src/utils/overviewCharts.js";
+import { buildCycleBuckets, buildExpiryTimeline, buildHourlyTraffic, resolveRecordTime, summarizeLimits, trafficShare } from "../src/utils/overviewCharts.js";
 import { formatBytes } from "../src/utils/format.js";
 import { summarizeAssets } from "../src/services/assets.js";
 
@@ -39,6 +39,49 @@ test("到期时间线超出上限时只返回前 N 台并给出剩余台数", ()
   assert.equal(timeline.total, 8);
   assert.equal(timeline.overflow, 3);
   assert.equal(timeline.items[0].name, "node-0");
+  // all 保留完整列表供卡片「展开全部」，且仍是升序。
+  assert.equal(timeline.all.length, 8);
+  assert.deepEqual(timeline.all.map((item) => item.name), nodes.map((item) => item.name));
+  // limit 传 Infinity 等价于全部展示，不该出现 overflow。
+  const full = buildExpiryTimeline(nodes, NOW, Infinity);
+  assert.equal(full.items.length, 8);
+  assert.equal(full.overflow, 0);
+});
+
+test("记录时间兼容 RFC3339 / 毫秒 / 秒时间戳，字段名兼容 time 与 updated_at", () => {
+  const ms = NOW - 2 * 3600000;
+  assert.equal(resolveRecordTime({ updated_at: new Date(ms).toISOString() }), ms);
+  assert.equal(resolveRecordTime({ time: new Date(ms).toISOString() }), ms);
+  assert.equal(resolveRecordTime({ time: ms }), ms);
+  assert.equal(resolveRecordTime({ time: Math.floor(ms / 1000) }), ms);
+  assert.equal(resolveRecordTime({ time: String(ms) }), ms);
+  assert.ok(Number.isNaN(resolveRecordTime({})));
+  assert.ok(Number.isNaN(resolveRecordTime({ time: "not-a-date" })));
+});
+
+test("记录只有累计总量时用相邻采样差值推算每小时流量", () => {
+  const hour = 3600000;
+  const records = Array.from({ length: 4 }, (_item, index) => ({
+    time: new Date(NOW - (4 - index) * hour).toISOString(),
+    network: { totalDown: index * 1024 ** 3, totalUp: index * 1024 ** 2 },
+  }));
+  const series = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(series.hasData, true);
+  assert.equal(series.source, "total");
+  assert.equal(series.samples, 4);
+  // 每次采样间隔 1 小时，累计量增加 1GiB，落在该小时桶里。
+  assert.equal(series.totalDown, 3 * 1024 ** 3);
+  assert.equal(series.totalUp, 3 * 1024 ** 2);
+  const byRate = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(byRate.points.length, 24);
+});
+
+test("既无速率也无累计量时判定为空，并给出采样数以便界面提示", () => {
+  const records = [{ time: new Date(NOW - 3600000).toISOString(), cpu: { usage: 10 } }];
+  const series = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(series.hasData, false);
+  assert.equal(series.source, "none");
+  assert.equal(series.samples, 1);
 });
 
 test("账期分布柱按剩余天数归入四档，柱高按最大档归一", () => {
