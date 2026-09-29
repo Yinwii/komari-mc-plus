@@ -1,4 +1,4 @@
-# Komari Minecraft
+# Komari MC Plus
 
 一款为 [Komari Monitor](https://github.com/komari-monitor/komari) 制作的监控面板主题，提供浅色、深色和 Minecraft 三种外观。主题使用 Vue 3 与 Vite 构建，所有节点和监控数据均来自 Komari API，不包含生产环境 Mock 数据。
 
@@ -32,7 +32,7 @@
 
 ### 上传主题包
 
-1. 前往 [Releases](https://github.com/Yinwii/komari-minecraft/releases/latest) 下载最新的 `komari-theme-minecraft-v*.zip`。
+1. 前往 [Releases](https://github.com/Yinwii/komari-minecraft/releases/latest) 下载最新的 `komari-theme-mc-plus-v*.zip`。
 2. 进入 Komari 后台的主题管理页面。
 3. 上传 ZIP 并启用主题。
 
@@ -128,13 +128,13 @@ npm run package:theme
 打包需要 PowerShell 7（`pwsh`），产物位于：
 
 ```text
-release/komari-theme-minecraft-v*.zip
+release/komari-theme-mc-plus-v*.zip
 ```
 
 主题包结构：
 
 ```text
-komari-theme-minecraft-v*.zip
+komari-theme-mc-plus-v*.zip
 ├── komari-theme.json
 └── dist/
     ├── index.html

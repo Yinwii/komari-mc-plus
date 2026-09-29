@@ -50,14 +50,14 @@ jobs:
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: komari-theme-minecraft-${{ github.ref_name }}
-          path: release/komari-theme-minecraft-v*.zip
+          name: komari-theme-mc-plus-${{ github.ref_name }}
+          path: release/komari-theme-mc-plus-v*.zip
           if-no-files-found: error
 
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/komari-theme-minecraft-v*.zip
+          files: release/komari-theme-mc-plus-v*.zip
           fail_on_unmatched_files: true
           generate_release_notes: true

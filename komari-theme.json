@@ -1,8 +1,8 @@
 {
-  "name": "Komari Minecraft",
-  "short": "Minecraft",
+  "name": "Komari MC Plus",
+  "short": "komari-mc-plus",
   "description": "支持浅色、深色与 Minecraft 外观的监控面板",
-  "version": "1.1.20",
+  "version": "1.1.21",
   "author": "Yinwii",
   "preview": "dist/preview.png",
   "url": "https://github.com/Yinwii/komari-minecraft",
