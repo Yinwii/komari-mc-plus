@@ -32,7 +32,7 @@
 
 ### 上传主题包
 
-1. 前往 [Releases](https://github.com/Yinwii/komari-minecraft/releases/latest) 下载最新的 `komari-theme-mc-plus-v*.zip`。
+1. 前往 [Releases](https://github.com/Yinwii/komari-mc-plus/releases/latest) 下载最新的 `komari-theme-mc-plus-v*.zip`。
 2. 进入 Komari 后台的主题管理页面。
 3. 上传 ZIP 并启用主题。
 
@@ -43,8 +43,16 @@
 也可以在 Komari 的“导入远程主题”中填写：
 
 ```text
-https://github.com/Yinwii/komari-minecraft
+https://github.com/Yinwii/komari-mc-plus
 ```
+
+## 版本说明
+
+- 本主题由 `ShumTin/komari-minecraft` 分支而来，自 v1.1.21 起改名为 **Komari MC Plus**（主题标识 `short` = `komari-mc-plus`），
+  并作为新版本线从 **v1.0.0** 重新开始计数。
+- tag `v1.1.2` ～ `v1.1.20` 是改名前的旧版本线，仅作历史归档与回退点保留，不再更新。
+- Komari 的远程更新只取最新 Release 的主题包，不比较版本号，因此版本号重排不影响升级。
+  旧版主题（`short` 为 `Minecraft`）需删除后重新导入一次，此后按 `komari-mc-plus` 正常更新。
 
 ## 主题配置
 
