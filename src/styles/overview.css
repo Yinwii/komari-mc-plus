@@ -212,6 +212,9 @@
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px dashed #e6e6e8;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .overview-regions .region-hint {
@@ -298,15 +301,17 @@
   fill: #17a05e;
 }
 
-/* 分地区在线率：单行横排均分宽度，地区多时自动换行 */
+/* 分地区在线率：单行横排自适应收缩，地区多时自动换行，不溢出卡片 */
 .region-rate {
-  flex: 1 1 0;
-  min-width: 118px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 10px;
   color: #71767e;
+  white-space: nowrap;
 }
 
 .region-rate .rate-flag {
@@ -318,27 +323,23 @@
   filter: grayscale(1);
 }
 
-.region-rate .rate-track {
-  flex: 1;
-  height: 5px;
-  border-radius: 3px;
-  background: #f0f0f2;
-  overflow: hidden;
-}
-
-.region-rate .rate-fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
+/* 粗圆点状态指示：绿=全在线，黄=部分在线，红=全离线 */
+.region-rate .rate-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
   background: #17a05e;
-  transition: width 0.4s ease;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
-.region-rate .rate-fill.is-partial { background: #d39424; }
-.region-rate .rate-fill.is-off { background: #d4574e; }
+.region-rate .rate-dot.is-partial { background: #d39424; }
+.region-rate .rate-dot.is-off { background: #d4574e; }
 
 .region-rate em {
-  min-width: 30px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: right;
   font-style: normal;
   font-weight: 600;

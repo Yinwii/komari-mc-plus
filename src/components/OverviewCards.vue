@@ -420,7 +420,7 @@ watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousVal
         <template v-else>
           <span v-for="item in regionStats" :key="item.region" class="region-rate" :class="regionDotClass(item)" :title="regionTitle(item)">
             <FlagIcon :code="item.region" :label="regionTitle(item)" class="rate-flag" />
-            <span class="rate-track"><span class="rate-fill" :class="regionDotClass(item)" :style="{ width: `${Math.round((item.online / item.total) * 100)}%` }" /></span>
+            <i class="rate-dot" :class="regionDotClass(item)" />
             <em>{{ item.online }}/{{ item.total }}</em>
           </span>
         </template>
