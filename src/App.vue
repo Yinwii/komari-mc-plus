@@ -369,18 +369,27 @@ function mockDemoRpc(method, params) {
       const offline = i > (48 + 2) * 12 && i <= (48 + 12) * 12;
       if (offline) continue;
       records.push({
+        // 刻意贴齐服务端 models.Record 的**扁平**字段：net_in/net_out 是瞬时速率（B/s），
+        // net_total_* 是累计量，时间字段是 time。
+        // 曾用过归一化后的 network:{up,down} 形状，结果把「总览卡 24h 趋势按错字段名取值」
+        // 这类问题完全掩盖掉了（demo 有图、真实环境空白），故保持与线上一致。
         time: new Date(time).toISOString(),
-        updated_at: new Date(time).toISOString(),
-        cpu: { usage: offline ? 0 : 8 + Math.random() * 20 },
-        ram: { used: (1.2 + Math.random() * 0.4) * 1024 ** 3, total: 4 * 1024 ** 3 },
-        swap: { used: (0.2 + Math.random() * 0.1) * 1024 ** 3, total: 2 * 1024 ** 3 },
-        disk: { used: (20 + Math.random() * 0.5) * 1024 ** 3, total: 80 * 1024 ** 3 },
-        network: { up: 1024 + Math.random() * 4096, down: 4096 + Math.random() * 12288 },
-        connections: { tcp: 10 + Math.round(Math.random() * 10), udp: 3 + Math.round(Math.random() * 5) },
+        cpu: offline ? 0 : 8 + Math.random() * 20,
+        ram: (1.2 + Math.random() * 0.4) * 1024 ** 3,
+        ram_total: 4 * 1024 ** 3,
+        swap: (0.2 + Math.random() * 0.1) * 1024 ** 3,
+        swap_total: 2 * 1024 ** 3,
+        disk: (20 + Math.random() * 0.5) * 1024 ** 3,
+        disk_total: 80 * 1024 ** 3,
+        net_in: offline ? 0 : 4096 + Math.random() * 12288,
+        net_out: offline ? 0 : 1024 + Math.random() * 4096,
+        net_total_down: 35.2 * 1024 ** 3 + (count - i) * (2 + Math.random()) * 1024 ** 2,
+        net_total_up: 34.7 * 1024 ** 3 + (count - i) * (0.6 + Math.random() * 0.3) * 1024 ** 2,
+        connections: 10 + Math.round(Math.random() * 10),
+        connections_udp: 3 + Math.round(Math.random() * 5),
         process: 90 + Math.round(Math.random() * 10),
         uptime: 62 * 86400 + 16 * 3600,
-        load: { load1: 0.1 + Math.random() * 0.2, load5: 0.05 + Math.random() * 0.15, load15: 0.02 + Math.random() * 0.1 },
-        online: !offline,
+        load: 0.1 + Math.random() * 0.2,
       });
     }
     return records;

@@ -36,7 +36,8 @@ function valueOf(record, key) {
   if (key === "disk") return Number(record?.disk?.used ?? record?.disk);
   if (key === "connections") {
     if (record?.connections && typeof record.connections === "object") return Number(record.connections.tcp || 0) + Number(record.connections.udp || 0);
-    return Number(record?.connections);
+    // 历史记录是服务端扁平结构：connections 为 TCP，UDP 在 connections_udp 单列。
+    return Number(record?.connections || 0) + Number(record?.connections_udp || 0);
   }
   return NaN;
 }
@@ -144,7 +145,7 @@ function queueRender() {
 }
 
 function recordsSignature() {
-  return props.records.map((record) => `${record.updated_at || record.time}:${record.cpu?.usage ?? record.cpu}:${record.ram?.used ?? record.ram}:${record.swap?.used ?? record.swap}:${record.disk?.used ?? record.disk}:${record.connections?.tcp ?? record.connections}`).join("|");
+  return props.records.map((record) => `${record.updated_at || record.time}:${record.cpu?.usage ?? record.cpu}:${record.ram?.used ?? record.ram}:${record.swap?.used ?? record.swap}:${record.disk?.used ?? record.disk}:${record.connections?.tcp ?? record.connections}:${record.connections_udp ?? ""}`).join("|");
 }
 
 function setHost(element, index) {

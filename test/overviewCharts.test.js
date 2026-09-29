@@ -3,6 +3,7 @@ import test from "node:test";
 import { buildCycleBuckets, buildExpiryTimeline, buildHourlyTraffic, resolveRecordTime, summarizeLimits, trafficShare } from "../src/utils/overviewCharts.js";
 import { formatBytes } from "../src/utils/format.js";
 import { summarizeAssets } from "../src/services/assets.js";
+import { normalizeRecordPayload } from "../src/services/nodeHistory.js";
 
 const DAY = 86400000;
 const NOW = Date.parse("2026-09-29T12:00:00Z");
@@ -141,6 +142,86 @@ test("24 小时流量趋势按小时分桶取平均速率再折算为字节", ()
   const empty = buildHourlyTraffic([], NOW, 24);
   assert.equal(empty.hasData, false);
   assert.equal(empty.totalDown, 0);
+});
+
+test("真实扁平记录（net_in/net_out）直接按速率折算为每小时流量", () => {
+  const hour = 3600000;
+  // 服务端 models.Record 的真实形状：扁平字段 + time，没有嵌套 network。
+  const records = [
+    { time: new Date(NOW - 3 * hour).toISOString(), net_in: 3600, net_out: 1800, net_total_down: 1000, net_total_up: 500 },
+    { time: new Date(NOW - 2 * hour).toISOString(), net_in: 7200, net_out: 3600, net_total_down: 2000, net_total_up: 1000 },
+  ];
+  const series = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(series.hasData, true);
+  assert.equal(series.source, "rate");
+  assert.equal(series.samples, 2);
+  assert.equal(series.empty, false);
+  // 24 小时窗口自 NOW-24h 起算：3 小时前的样本落在第 21 个桶。
+  assert.equal(series.points[21].down, 3600 * 3600);
+  assert.equal(series.points[22].down, 7200 * 3600);
+  assert.equal(series.totalDown, (3600 + 7200) * 3600);
+  assert.equal(series.totalUp, (1800 + 3600) * 3600);
+});
+
+test("只有扁平累计量（net_total_down/up）时按相邻采样差值推算", () => {
+  const hour = 3600000;
+  const records = [
+    { time: new Date(NOW - 3 * hour).toISOString(), net_total_down: 0, net_total_up: 0 },
+    { time: new Date(NOW - 2 * hour).toISOString(), net_total_down: 1024 ** 3, net_total_up: 1024 ** 2 },
+    { time: new Date(NOW - 1 * hour).toISOString(), net_total_down: 3 * 1024 ** 3, net_total_up: 2 * 1024 ** 2 },
+  ];
+  const series = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(series.source, "total");
+  assert.equal(series.empty, false);
+  assert.equal(series.points[22].down, 1024 ** 3);
+  assert.equal(series.points[23].down, 2 * 1024 ** 3);
+  assert.equal(series.totalUp, 2 * 1024 ** 2);
+});
+
+test("只有计费周期流量计数（traffic_down/up）时退化为差值推算", () => {
+  const hour = 3600000;
+  const records = [
+    { time: new Date(NOW - 2 * hour).toISOString(), traffic_down: 10 * 1024 ** 3, traffic_up: 1024 ** 3 },
+    { time: new Date(NOW - 1 * hour).toISOString(), traffic_down: 10.5 * 1024 ** 3, traffic_up: 1024 ** 3 + 1024 ** 2 },
+  ];
+  const series = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(series.source, "total");
+  assert.equal(series.empty, false);
+  assert.equal(series.points[23].down, 0.5 * 1024 ** 3);
+  assert.equal(series.points[23].up, 1024 ** 2);
+});
+
+test("速率为 0 但累计量在增长时自动切到差值来源，不误判为零流量", () => {
+  const hour = 3600000;
+  const records = [
+    { time: new Date(NOW - 2 * hour).toISOString(), net_in: 0, net_out: 0, net_total_down: 500, net_total_up: 0 },
+    { time: new Date(NOW - 1 * hour).toISOString(), net_in: 0, net_out: 0, net_total_down: 1500, net_total_up: 0 },
+  ];
+  const series = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(series.source, "total");
+  assert.equal(series.empty, false);
+  assert.equal(series.points[23].down, 1000);
+});
+
+test("速率字段恒为 0 时标记为空流量，交给界面显示文案而不是贴底直线", () => {
+  const records = [{ time: new Date(NOW - 3600000).toISOString(), net_in: 0, net_out: 0 }];
+  const series = buildHourlyTraffic([records], NOW, 24);
+  assert.equal(series.hasData, true);
+  assert.equal(series.empty, true);
+  assert.equal(series.totalDown, 0);
+});
+
+test("历史记录载荷兼容数组与「按 uuid 分组对象」两种形状", () => {
+  const a = { time: "2026-09-29T10:00:00Z", net_in: 1 };
+  const b = { time: "2026-09-29T10:00:00Z", net_in: 2 };
+  // public:getRecordsByUUID 返回扁平数组；common:getRecords 返回按 uuid 分组的对象。
+  assert.deepEqual(normalizeRecordPayload({ records: [a] }), [a]);
+  assert.deepEqual(normalizeRecordPayload([a]), [a]);
+  assert.deepEqual(normalizeRecordPayload({ records: { "uuid-1": [a], "uuid-2": [b] } }), [a, b]);
+  // 分组内的非对象元素与空载荷必须安全过滤。
+  assert.deepEqual(normalizeRecordPayload({ records: { u: [a, null, 3] } }), [a]);
+  assert.deepEqual(normalizeRecordPayload({ records: null }), []);
+  assert.deepEqual(normalizeRecordPayload(undefined), []);
 });
 
 test("剩余价值比例条：比例夹取在 0-1，买断计入总价值与剩余", () => {

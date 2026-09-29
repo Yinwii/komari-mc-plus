@@ -48,7 +48,7 @@ class NodeHistoryService {
       try {
         const payload = await callRpc("public:getRecordsByUUID", { uuid, hours: String(hours) });
         this.source = "public:getRecordsByUUID";
-        return normalizeRecords(payload);
+        return normalizeRecordPayload(payload);
       } catch (error) {
         if (!isUnsupportedMethod(error)) throw error;
       }
@@ -61,7 +61,7 @@ class NodeHistoryService {
       maxCount: MAX_RECORDS,
     });
     this.source = "common:getRecords";
-    return normalizeRecords(payload);
+    return normalizeRecordPayload(payload);
   }
 }
 
@@ -97,10 +97,27 @@ function abortError(signal) {
   }
 }
 
-function normalizeRecords(payload) {
-  const records = Array.isArray(payload) ? payload : payload?.records;
-  if (!Array.isArray(records)) return [];
-  return records.filter((record) => record && typeof record === "object");
+/**
+ * 记录载荷归一化为「记录数组」。
+ *
+ * 两种返回形状：
+ * - `public:getRecordsByUUID` → `{ records: [models.Record...], count }`（单节点，扁平数组）
+ * - `common:getRecords` → `{ records: { <uuid>: [models.Record...] }, count }`（按节点分组）
+ *
+ * 早期版本只处理数组，走到 `common:getRecords` 兜底路径时会拿到对象 → 判定为空数组 →
+ * 图表永远「暂无历史数据」，所以这里把分组对象也拍平。
+ */
+export function normalizeRecordPayload(payload) {
+  const source = payload?.records ?? payload;
+  if (Array.isArray(source)) return source.filter(isRecord);
+  if (source && typeof source === "object") {
+    return Object.values(source).flatMap((group) => (Array.isArray(group) ? group : [])).filter(isRecord);
+  }
+  return [];
+}
+
+function isRecord(record) {
+  return Boolean(record) && typeof record === "object" && !Array.isArray(record);
 }
 
 function isUnsupportedMethod(error) {

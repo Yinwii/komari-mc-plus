@@ -140,23 +140,41 @@ export function resolveRecordTime(record) {
   return Date.parse(text);
 }
 
-/** 采样速率（字节/秒）：兼容 network.down/up 与扁平字段。 */
+/** 取第一个「有限非负数」，全部取不到返回 NaN（0 是合法值，不能当缺失）。 */
+function firstNumber(...values) {
+  for (const value of values) {
+    if (value === undefined || value === null || value === "") continue;
+    const num = Number(value);
+    if (Number.isFinite(num) && num >= 0) return num;
+  }
+  return NaN;
+}
+
+/**
+ * 采样速率（字节/秒）。
+ *
+ * **字段顺序很关键**：`public:getRecordsByUUID` / `common:getRecords` 返回的是服务端
+ * `models.Record` 的**扁平**结构 —— 下行 `net_in`、上行 `net_out`（对应 report 里的
+ * Network.Down / Network.Up）。而主题里 `normalizeLatestRecord()` 会把实时状态包装成
+ * `network: { up, down }`，历史记录**不经过**这一步。两者都兼容，但扁平字段在前。
+ */
 function recordRate(record) {
-  const down = Number(record?.network?.down ?? record?.network_down ?? record?.net_down);
-  const up = Number(record?.network?.up ?? record?.network_up ?? record?.net_up);
   return {
-    down: Number.isFinite(down) && down >= 0 ? down : NaN,
-    up: Number.isFinite(up) && up >= 0 ? up : NaN,
+    down: firstNumber(record?.net_in, record?.network?.down, record?.network_down, record?.net_down),
+    up: firstNumber(record?.net_out, record?.network?.up, record?.network_up, record?.net_up),
   };
 }
 
-/** 累计流量（字节）：兼容 network.totalDown/totalUp 与扁平字段。 */
+/**
+ * 累计流量（字节）。
+ * 首选扁平 `net_total_down` / `net_total_up`（自启动累计），
+ * 其次归一化后的 network.totalDown/Up，最后退到计费周期计数 `traffic_down` / `traffic_up`
+ * （部分实例的指标库里只有这组计数；差值逻辑本身会挡掉归零导致的负增量）。
+ */
 function recordTotal(record) {
-  const down = Number(record?.network?.totalDown ?? record?.network?.total_down ?? record?.total_down);
-  const up = Number(record?.network?.totalUp ?? record?.network?.total_up ?? record?.total_up);
   return {
-    down: Number.isFinite(down) && down >= 0 ? down : NaN,
-    up: Number.isFinite(up) && up >= 0 ? up : NaN,
+    down: firstNumber(record?.net_total_down, record?.network?.totalDown, record?.network?.total_down, record?.total_down, record?.traffic_down),
+    up: firstNumber(record?.net_total_up, record?.network?.totalUp, record?.network?.total_up, record?.total_up, record?.traffic_up),
   };
 }
 
@@ -199,23 +217,33 @@ export function buildHourlyTraffic(recordSets = [], now = Date.now(), hours = 24
   }
 
   const average = (list) => (list.length ? list.reduce((sum, value) => sum + value, 0) / list.length : 0);
-  const rateBits = buckets.some((bucket) => bucket.down.length || bucket.up.length);
-  const source = rateBits
+  const hasSample = (list) => list.some((bucket) => bucket.down.length || bucket.up.length);
+  const hasPositive = (list) => list.some((bucket) => bucket.down.some((value) => value > 0) || bucket.up.some((value) => value > 0));
+  // 优先选「有真实流量」的来源：速率全 0 但累计量在涨时（部分上报源只给累计量）应走差值分支。
+  const source = hasPositive(buckets)
     ? "rate"
-    : deltaBuckets.some((bucket) => bucket.down.length || bucket.up.length)
+    : hasPositive(deltaBuckets)
       ? "total"
-      : "none";
+      : hasSample(buckets)
+        ? "rate"
+        : hasSample(deltaBuckets)
+          ? "total"
+          : "none";
   const points = (source === "total" ? deltaBuckets : buckets).map((bucket) => (
     source === "total"
       ? { down: average(bucket.down), up: average(bucket.up) }
       : { down: average(bucket.down) * 3600, up: average(bucket.up) * 3600 }
   ));
+  const totalDown = points.reduce((sum, point) => sum + point.down, 0);
+  const totalUp = points.reduce((sum, point) => sum + point.up, 0);
   return {
     points,
     source,
     samples,
     hasData: source !== "none",
-    totalDown: points.reduce((sum, point) => sum + point.down, 0),
-    totalUp: points.reduce((sum, point) => sum + point.up, 0),
+    // 有采样但 24 小时内流量恒为 0：界面提示「无流量记录」比画一条贴底的直线更清楚。
+    empty: source !== "none" && totalDown <= 0 && totalUp <= 0,
+    totalDown,
+    totalUp,
   };
 }

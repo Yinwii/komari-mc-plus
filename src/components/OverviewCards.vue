@@ -271,15 +271,20 @@ const limitRingOffset = computed(() => LIMIT_RING_CIRCUMFERENCE * (1 - limitSumm
 const TRAFFIC_HISTORY_HOURS = 24;
 const TRAFFIC_HISTORY_CONCURRENCY = 4;
 const TRAFFIC_HISTORY_MAX_NODES = 40;
-const trafficHistory = ref({ points: [], totalDown: 0, totalUp: 0, hasData: false, source: "none", samples: 0 });
+const trafficHistory = ref(emptyTrafficHistory());
 const trafficHistoryLoading = ref(false);
 const trafficHistoryError = ref("");
 let trafficAbort = null;
 let trafficRequestId = 0;
 
+function emptyTrafficHistory() {
+  return { points: [], totalDown: 0, totalUp: 0, hasData: false, empty: false, source: "none", samples: 0 };
+}
+
 const trafficSparkPoints = computed(() => {
-  const { hasData, points } = trafficHistory.value;
-  if (!hasData || points.length < 2) return null;
+  const { hasData, empty, points } = trafficHistory.value;
+  // empty（有采样但 24 小时流量恒为 0）交给占位文案，避免画一条贴底的直线。
+  if (!hasData || empty || points.length < 2) return null;
   const max = Math.max(...points.map((point) => Math.max(point.down, point.up)), 1);
   const step = SPARK_W / (points.length - 1);
   const build = (key) => {
@@ -297,7 +302,7 @@ async function syncTrafficHistory() {
   trafficAbort = null;
   if (trafficChartMode.value !== "24h 流量趋势" || !uuids.length) {
     trafficRequestId += 1;
-    trafficHistory.value = { points: [], totalDown: 0, totalUp: 0, hasData: false, source: "none", samples: 0 };
+    trafficHistory.value = emptyTrafficHistory();
     trafficHistoryError.value = "";
     trafficHistoryLoading.value = false;
     return;
@@ -531,6 +536,7 @@ watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousVal
           </svg>
           <span v-else class="chart-placeholder">
             <template v-if="trafficHistoryLoading">正在加载 24 小时流量…</template>
+            <template v-else-if="trafficHistory.empty">24 小时内没有流量记录</template>
             <template v-else>
               {{ trafficHistoryError || "暂无历史流量数据" }}
               <button v-if="trafficHistoryError" class="expiry-toggle" type="button" @click="retryTrafficHistory">重试</button>
