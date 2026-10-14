@@ -105,6 +105,12 @@ function regionDotClass(item) {
   return "is-on";
 }
 
+// 环图填充百分比：反映该地区的在线占比（全部离线时为 0%，环形轨道会转为红色提示不可用）。
+function regionRingPercent(item) {
+  if (!item.total || item.online <= 0) return 0;
+  return Math.round((item.online / item.total) * 100);
+}
+
 // 点阵地图：常用国家/地区的简化点阵坐标（col,row），未收录地区不在地图上显示。
 const REGION_MAP_POS = {
   US: [3, 2], CA: [4, 1], MX: [3, 4], BR: [8, 6], AR: [7, 8], CL: [7, 9],
@@ -418,9 +424,15 @@ watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousVal
           <small class="region-hint">点亮 {{ regionLitCount }} / {{ regionStats.length }} 地区</small>
         </template>
         <template v-else>
-          <span v-for="item in regionStats" :key="item.region" class="region-rate" :class="regionDotClass(item)" :title="regionTitle(item)">
+          <span
+            v-for="item in regionStats"
+            :key="item.region"
+            class="region-rate"
+            :class="regionDotClass(item)"
+            :title="regionTitle(item)"
+          >
             <FlagIcon :code="item.region" :label="regionTitle(item)" class="rate-flag" />
-            <i class="rate-dot" :class="regionDotClass(item)" />
+            <i class="rate-ring" :class="regionDotClass(item)" :style="{ '--p': regionRingPercent(item) }" />
             <em>{{ item.online }}/{{ item.total }}</em>
           </span>
         </template>

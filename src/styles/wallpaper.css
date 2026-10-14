@@ -135,6 +135,8 @@
 
 .monitor-app.has-wallpaper:not(.mc-theme) .region-pill { background: rgba(255, 255, 255, 0.55); }
 .monitor-app.is-dark.has-wallpaper .region-pill { background: rgba(23, 34, 49, 0.55); }
+.monitor-app.has-wallpaper:not(.mc-theme) .region-rate { background: rgba(255, 255, 255, 0.55); border-color: rgba(255, 255, 255, 0.5); }
+.monitor-app.is-dark.has-wallpaper .region-rate { background: rgba(23, 34, 49, 0.55); }
 
 /* 卡片底部图例的轨道与分隔线跟随玻璃质感，否则实色底会在壁纸上显得突兀 */
 .monitor-app.has-wallpaper:not(.mc-theme) .overview-chart { border-top-color: rgba(255, 255, 255, 0.45); }

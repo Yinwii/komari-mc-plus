@@ -225,8 +225,7 @@
 
 /* 少数地区也保持单行横排，减少垂直版面占用；过多时自动换行。 */
 .overview-regions.is-1,
-.overview-regions.is-2,
-.overview-regions.is-3 {
+.overview-regions.is-2 {
   flex-wrap: nowrap;
 }
 
@@ -301,17 +300,29 @@
   fill: #17a05e;
 }
 
-/* 分地区在线率：单行横排自适应收缩，地区多时自动换行，不溢出卡片 */
+/* 分地区在线率：网格铺满卡片宽度，一格一地区（环图 = 在线占比），避免右侧留白 */
+.overview-regions.is-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+
 .region-rate {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 100%;
+  --ring-track: #e6e6e8;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid #ececef;
+  border-radius: 8px;
+  background: #f7f7f8;
   font-size: 10px;
   color: #71767e;
   white-space: nowrap;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .region-rate .rate-flag {
@@ -323,18 +334,20 @@
   filter: grayscale(1);
 }
 
-/* 粗圆点状态指示：绿=全在线，黄=部分在线，红=全离线 */
-.region-rate .rate-dot {
+/* 环图：外环按在线占比填充，绿=全在线，黄=部分在线，红=全离线 */
+.region-rate .rate-ring {
+  --ring-c: #17a05e;
   flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #17a05e;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  background: conic-gradient(var(--ring-c) calc(var(--p, 0) * 1%), var(--ring-track) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3.5px));
 }
 
-.region-rate .rate-dot.is-partial { background: #d39424; }
-.region-rate .rate-dot.is-off { background: #d4574e; }
+.region-rate.is-partial .rate-ring { --ring-c: #d39424; }
+.region-rate.is-off .rate-ring { --ring-c: #d4574e; --ring-track: rgba(212, 87, 78, 0.26); }
 
 .region-rate em {
   min-width: 0;
@@ -343,6 +356,7 @@
   text-align: right;
   font-style: normal;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 剩余价值卡 / 累计流量卡：底部图例（留存比例条、到期时间线、账期分布柱、上下行构成、24h 趋势、限额用量环） */
