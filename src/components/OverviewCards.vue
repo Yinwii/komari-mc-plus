@@ -140,19 +140,23 @@ const WORLD_ROWS = [
 
 const mapDots = computed(() => {
   if (regionMode.value !== "点阵地图") return [];
-  const lit = new Set(regionStats.value.filter((item) => item.online > 0).map((item) => item.region));
   const dots = [];
   WORLD_ROWS.forEach((row, r) => {
     for (let c = 0; c < row.length; c++) {
       if (row[c] !== "X") continue;
-      dots.push({ x: c * 9 + 5, y: r * 7.2 + 4, lit: false });
+      dots.push({ x: c * 9 + 5, y: r * 7.2 + 4 });
     }
   });
-  // 有在线节点的国家覆盖为高亮大点（近似经纬位置）。
+  // 有节点的国家：在线=绿色大点，全离线=红色中点（近似经纬位置）。
   regionStats.value.forEach((item) => {
     const pos = REGION_MAP_POS[item.region];
-    if (!pos || item.online === 0) return;
-    dots.push({ x: pos[0] * 9 + 5, y: pos[1] * 7.2 + 4, lit: true, region: item.region, title: regionTitle(item) });
+    if (!pos) return;
+    dots.push({
+      x: pos[0] * 9 + 5,
+      y: pos[1] * 7.2 + 4,
+      state: item.online > 0 ? "on" : "down",
+      title: regionTitle(item),
+    });
   });
   return dots;
 });
@@ -405,21 +409,31 @@ watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousVal
       <p class="overview-status"><b />在线率 {{ overview.online.rate }}</p>
       <div v-if="regionMode && regionStats.length" class="overview-regions" :class="`is-${['国旗墙', '地区胶囊', '点阵地图', '分地区在线率'].indexOf(regionMode)}`">
         <template v-if="regionMode === '国旗墙'">
-          <span v-for="item in regionStats" :key="item.region" class="region-flag" :class="regionDotClass(item)" :title="regionTitle(item)">
+          <span v-for="item in regionStats" :key="item.region" class="region-tile flag-tile" :class="regionDotClass(item)" :title="regionTitle(item)">
             <FlagIcon :code="item.region" :label="regionTitle(item)" />
+            <em>{{ item.online === 0 ? 0 : item.online < item.total ? `${item.online}/${item.total}` : item.total }}</em>
           </span>
           <small class="region-hint">点亮 {{ regionLitCount }} / {{ regionStats.length }} 地区</small>
         </template>
         <template v-else-if="regionMode === '地区胶囊'">
-          <span v-for="item in regionStats" :key="item.region" class="region-pill" :title="regionTitle(item)">
-            <i :class="regionDotClass(item)" />
+          <span v-for="item in regionStats" :key="item.region" class="region-tile region-pill" :class="regionDotClass(item)" :title="regionTitle(item)">
+            <i class="pill-dot" />
             <FlagIcon :code="item.region" :label="regionTitle(item)" />
+            <span class="pill-name">{{ getRegionDisplayName(item.region) }}</span>
             <em>{{ item.online === 0 ? 0 : item.online < item.total ? `${item.online}/${item.total}` : item.total }}</em>
           </span>
         </template>
         <template v-else-if="regionMode === '点阵地图'">
-          <svg class="region-map" viewBox="0 0 216 72" preserveAspectRatio="xMidYMid meet" role="img" aria-label="有在线节点的国家地区点阵地图">
-            <circle v-for="(dot, index) in mapDots" :key="index" :cx="dot.x" :cy="dot.y" :r="dot.lit ? 3.2 : 2.4" :class="dot.lit ? 'map-dot is-on' : 'map-dot'" :title="dot.title" />
+          <svg class="region-map" viewBox="0 0 216 72" preserveAspectRatio="xMidYMid meet" role="img" aria-label="有节点的国家地区点阵地图">
+            <circle
+              v-for="(dot, index) in mapDots"
+              :key="index"
+              :cx="dot.x"
+              :cy="dot.y"
+              :r="dot.state === 'on' ? 4 : dot.state === 'down' ? 3.4 : 2.4"
+              :class="dot.state === 'on' ? 'map-dot is-on' : dot.state === 'down' ? 'map-dot is-down' : 'map-dot'"
+              :title="dot.title"
+            />
           </svg>
           <small class="region-hint">点亮 {{ regionLitCount }} / {{ regionStats.length }} 地区</small>
         </template>
@@ -427,13 +441,18 @@ watch(() => props.nodes.map((node) => node.uuid).join("|"), (_value, previousVal
           <span
             v-for="item in regionStats"
             :key="item.region"
-            class="region-rate"
+            class="region-tile rate-tile"
             :class="regionDotClass(item)"
             :title="regionTitle(item)"
           >
-            <FlagIcon :code="item.region" :label="regionTitle(item)" class="rate-flag" />
-            <i class="rate-ring" :class="regionDotClass(item)" :style="{ '--p': regionRingPercent(item) }" />
-            <em>{{ item.online }}/{{ item.total }}</em>
+            <span class="rate-head">
+              <FlagIcon :code="item.region" :label="regionTitle(item)" class="rate-flag" />
+              <span class="rate-name">{{ getRegionDisplayName(item.region) }}</span>
+            </span>
+            <span class="rate-line">
+              <i class="rate-ring" :class="regionDotClass(item)" :style="{ '--p': regionRingPercent(item) }" />
+              <em>{{ item.online }}/{{ item.total }}</em>
+            </span>
           </span>
         </template>
       </div>
